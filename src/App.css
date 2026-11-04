@@ -852,3 +852,44 @@ body.modal-open { overflow: hidden; }
   color: #ff9aa8;
   pointer-events: none;
 }
+
+
+/* ---------- Countdown gate ---------- */
+.gate-card { min-height: 0; }
+.gate-sub {
+  margin: -12px 0 22px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.3rem;
+}
+.count { display: flex; justify-content: center; gap: 10px; margin-bottom: 24px; }
+.count-unit {
+  position: relative;
+  flex: 1 1 0;
+  max-width: 92px;
+  padding: 12px 4px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 42, 92, 0.15);
+}
+.count-unit strong {
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: clamp(1.7rem, 7vw, 2.4rem);
+  line-height: 1.1;
+  color: var(--navy);
+  font-variant-numeric: tabular-nums;
+}
+.count-unit span {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue);
+}
+.code-area { min-height: 56px; }
+@media (max-width: 420px) { .count { gap: 6px; } .count-unit span { font-size: 0.6rem; } }

@@ -21,6 +21,10 @@ const CONFIG = {
   name: "Ashley Nicole",
   nickname: "Leyley",
   from: "Hulyo",
+  // Site opens at this moment (12:00 AM, Dec 1 2026, Philippine time)
+  unlockAt: "2026-12-01T00:00:00+08:00",
+  // Type this on the countdown screen to skip the timer (set to "" to disable)
+  bypassCode: "leyley",
   music: "/music.mp3",
   letter: [
     "Happy Happy Birthday My love!!! You’ve gone through so much with me, and without me, your whole life is such a beautiful thing to explore alam mo ba ‘yon?",
@@ -854,7 +858,93 @@ function Letters() {
   );
 }
 
-export default function App() {
+/* ---------------------------- countdown gate ---------------------------- */
+
+const UNLOCK_AT = new Date(CONFIG.unlockAt).getTime();
+const BYPASS_KEY = "bday-bypass";
+
+function timeParts(ms) {
+  const t = Math.max(0, Math.floor(ms / 1000));
+  return {
+    Days: Math.floor(t / 86400),
+    Hours: Math.floor((t % 86400) / 3600),
+    Minutes: Math.floor((t % 3600) / 60),
+    Seconds: t % 60,
+  };
+}
+
+function Gate({ left, onBypass }) {
+  const [revealed, setRevealed] = useState(false);
+  const typed = useRef("");
+  const parts = timeParts(left);
+
+  // Typing the secret code anywhere on the page makes the bypass button appear
+  useEffect(() => {
+    const secret = (CONFIG.bypassCode || "").toLowerCase();
+    if (!secret) return;
+    const onKey = (e) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+      typed.current = (typed.current + e.key.toLowerCase()).slice(-secret.length);
+      if (typed.current === secret) setRevealed(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
+  return (
+    <MotionConfig reducedMotion="user">
+      <div className="intro gate">
+        <Tulips mode="on-dark" />
+        <motion.div
+          className="intro-card gate-card"
+          initial={{ opacity: 0, y: 30, scale: 0.96 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.6, ease: EASE }}
+        >
+          <div className="step">
+            <h1 className="big">BAWAL PA BLEEE</h1>
+            <p className="gate-sub">Sa Dec 1 mo pa to maacess :P</p>
+
+            <div className="count" role="timer" aria-live="off">
+              {Object.entries(parts).map(([label, value]) => (
+                <div className="count-unit" key={label}>
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.strong
+                      key={value}
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.25, ease: EASE }}
+                    >
+                      {String(value).padStart(2, "0")}
+                    </motion.strong>
+                  </AnimatePresence>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="code-area">
+              <AnimatePresence>
+                {revealed && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12, scale: 0.9 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    transition={{ type: "spring", stiffness: 260, damping: 18 }}
+                  >
+                    <Btn onClick={onBypass}>Hey Hulyo</Btn>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    </MotionConfig>
+  );
+}
+
+function Birthday() {
   // 0-3 = intro cards, 4 = site expanding from the button, 5 = site
   const [step, setStep] = useState(0);
   const [noPos, setNoPos] = useState({ x: 0, y: 0 });
@@ -1107,4 +1197,34 @@ export default function App() {
       </div>
     </MotionConfig>
   );
+}
+
+export default function App() {
+  const [bypassed, setBypassed] = useState(() => {
+    try {
+      return sessionStorage.getItem(BYPASS_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [now, setNow] = useState(() => Date.now());
+
+  useEffect(() => {
+    if (bypassed) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [bypassed]);
+
+  const bypass = () => {
+    try {
+      sessionStorage.setItem(BYPASS_KEY, "1");
+    } catch {
+      /* storage unavailable: bypass still works for this visit */
+    }
+    setBypassed(true);
+  };
+
+  const left = UNLOCK_AT - now;
+  if (bypassed || left <= 0) return <Birthday />;
+  return <Gate left={left} onBypass={bypass} />;
 }
