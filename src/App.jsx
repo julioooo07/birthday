@@ -23,8 +23,12 @@ const CONFIG = {
   from: "Hulyo",
   music: "/music.mp3",
   letter: [
-    "Write your message here. Tell her what she means to you, your favorite things about her, and what you wish for her this year.",
-    "Add as many paragraphs as you want. Happy birthday, my love.",
+    "Happy Happy Birthday My love!!! You’ve gone through so much with me, and without me, your whole life is such a beautiful thing to explore alam mo ba ‘yon?",
+    "Knowing you for just how long made me realize already about what kind of person you are, and now that I’m courting you, I wanna know more and I want to build a genuine connection with you that exceeds the bounderies of our friendship.",
+    "I just wanted to say that you’ve done a lot for me, more than you even remember. Every small supports, small details you do like remembering my favorites, my comfort foods, how I think, and especially how you handle me as a person and your special someone. Everything You do means so much more because you don’t even realize how big it is for me as someone who’d gone through a lot just to get to where i am at. And that’s the very thing I loved about you. Every loveable thing you do comes out of you very naturally like it’s your nature to do those things.",
+    "And that’s why I’m so excited celebrating your day as you reach another mileston of your life, but most importantly, reaching another year of you existing. If I could blow candles to wish you every good things in life, it’ll be so much that it won’t fit the cake, but in one candle, I wish you the best in life, every little thing you’ve ever hoped for, hoped to achieve, hoped to get. I know you have the ability to have all those but i wanted you to know that, i may or may not be your wish, but not only me, all your loved ones are wishing you those as well.",
+    "I hope kahit may work tayo prolly the day you’re reading this, is maenjoy mo parin yung birthday mo. Konting tiis nalang ley gragrad na tayo. Apaka swerte ko kasi nakilala, nakasama, at minamahal kita.",
+    "Once again, Happy Birthdayyy My Woman!! We, I will always be here for you, supporting you, and will love you, just as much how you love us. Love yah my love",
   ],
   checklist: [
     { label: "This Web", done: true },
@@ -38,6 +42,10 @@ const CONFIG = {
     glad: "I'm glad to hear it",
     no: "That's okay. You don't have to be. I'm here, and I hope this made your day a little brighter.",
     wish: "My birthday wish for you is to always be happy, whatever it is, whomever you are with, whatever you're doing, I hope you'll be happy. That's all I'll ever ask for you.",
+    hugAsk: "You didn't receive a hug?",
+    hugYes: "I did, thanks",
+    hugNo: "No, we didn't see each other",
+    hugMsg: "I'll hug you when I see you. Just know I miss you a lot.",
     final: "Happy Birthday, My love. I'll always be here, loving you. :)",
   },
   memories: [
@@ -47,6 +55,52 @@ const CONFIG = {
     { caption: "Somewhere we went", src: "" },
     { caption: "Your best smile", src: "" },
     { caption: "Us, lately", src: "" },
+    { caption: "Memory 7", src: "" },
+    { caption: "Memory 8", src: "" },
+    { caption: "Memory 9", src: "" },
+    { caption: "Memory 10", src: "" },
+    { caption: "Memory 11", src: "" },
+    { caption: "Memory 12", src: "" },
+    { caption: "Memory 13", src: "" },
+    { caption: "Memory 14", src: "" },
+    { caption: "Memory 15", src: "" },
+    { caption: "Memory 16", src: "" },
+    { caption: "Memory 17", src: "" },
+    { caption: "Memory 18", src: "" },
+    { caption: "Memory 19", src: "" },
+    { caption: "Memory 20", src: "" },
+  ],
+  memoriesEnd: "To more memories with you, Love",
+  // 5 letters, each opens from its own envelope
+  letters: [
+    {
+      label: "Mariah",
+      title: "My dearest Leyley,",
+      body: [
+        "Write your first letter here. Tell her what you were feeling when you wrote this.",
+        "Add as many paragraphs as you want.",
+      ],
+    },
+    {
+      label: "Alliah",
+      title: "Hi, my love,",
+      body: ["Write your second letter here.", "Another paragraph, if you'd like."],
+    },
+    {
+      label: "khat",
+      title: "Hey you,",
+      body: ["Write your third letter here.", "Another paragraph, if you'd like."],
+    },
+    {
+      label: "kazy",
+      title: "My happy girl,",
+      body: ["Write your fourth letter here.", "Another paragraph, if you'd like."],
+    },
+    {
+      label: "lexa",
+      title: "To my forever,",
+      body: ["Write your fifth letter here.", "Another paragraph, if you'd like."],
+    },
   ],
 };
 
@@ -77,7 +131,7 @@ const TULIPS = Array.from({ length: 18 }, (_, i) => ({
   tone: i % 2 ? "a" : "b",
 }));
 
-const CONFETTI_COLORS = ["#2f6fe4", "#9cc4ff", "#ffffff", "#0f2a5c", "#6fa8f7"];
+const CONFETTI_COLORS = ["#2f6fe4", "#9cc4ff", "#ffd36b", "#ff9aa8", "#0f2a5c", "#6fa8f7"];
 
 const heroParent = {
   hidden: {},
@@ -297,10 +351,9 @@ function MusicButton({ audioRef, playing, setPlaying }) {
   );
 }
 
-function Checklist() {
+function Checklist({ done, setDone }) {
   const ref = useRef(null);
   const inView = useInView(ref, { once: true, margin: "0px 0px -35% 0px" });
-  const [done, setDone] = useState(() => CONFIG.checklist.map((c) => c.done));
   const toggle = (i) => setDone((d) => d.map((v, j) => (j === i ? !v : v)));
 
   return (
@@ -310,7 +363,7 @@ function Checklist() {
         {CONFIG.checklist.map((item, i) => {
           const on = done[i] && inView;
           return (
-            <Reveal as="li" key={item.label} y={40} start={0.95 - i * 0.08} end={0.6 - i * 0.08}>
+            <Reveal as="li" key={item.label} y={40} start={0.98 - i * 0.03} end={0.85 - i * 0.03}>
               <button className="check-row" role="checkbox" aria-checked={done[i]} onClick={() => toggle(i)}>
                 <span className={`check-box ${on ? "on" : ""}`}>
                   <svg viewBox="0 0 24 24">
@@ -370,8 +423,8 @@ function Smiley() {
       <motion.path
         d="M34 68 Q60 100 86 68"
         fill="none" stroke="#0f2a5c" strokeWidth="6" strokeLinecap="round"
-        initial={{ pathLength: 0 }}
-        animate={{ pathLength: 1 }}
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 1 }}
         transition={{ delay: 0.45, duration: 0.7, ease: EASE }}
       />
     </motion.svg>
@@ -420,8 +473,47 @@ function Ticket({ children, stub }) {
   );
 }
 
-function AskFlow({ onClose }) {
-  const [step, setStep] = useState("q");
+const HEARTS = Array.from({ length: 9 }, (_, i) => ({
+  x: (i - 4) * 24 + ((i * 37) % 11),
+  delay: i * 0.25,
+  size: 18 + ((i * 7) % 14),
+}));
+
+function HugAnim() {
+  return (
+    <motion.div
+      className="hug"
+      initial={{ opacity: 0, scale: 0.5 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ type: "spring", stiffness: 160, damping: 14 }}
+      aria-hidden="true"
+    >
+      <motion.span
+        className="hug-emoji"
+        animate={{ scale: [1, 1.18, 1, 1.18, 1], rotate: [0, -8, 0, 8, 0] }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
+      >
+        🤗
+      </motion.span>
+      {HEARTS.map((h, i) => (
+        <motion.span
+          key={i}
+          className="hug-heart"
+          style={{ left: `calc(50% + ${h.x}px)`, fontSize: h.size }}
+          initial={{ y: 0, opacity: 0 }}
+          animate={{ y: -170, opacity: [0, 1, 0] }}
+          transition={{ duration: 2, repeat: Infinity, delay: h.delay, ease: "easeOut" }}
+        >
+          ♥
+        </motion.span>
+      ))}
+    </motion.div>
+  );
+}
+
+function AskFlow({ onClose, hugged }) {
+  const [step, setStep] = useState(hugged ? "q" : "hug");
   const [pieces, setPieces] = useState([]);
   const A = CONFIG.ask;
 
@@ -437,7 +529,13 @@ function AskFlow({ onClose }) {
 
   useEffect(() => {
     if (step !== "smile") return;
-    const t = setTimeout(() => setStep("glad"), 2100);
+    const t = setTimeout(() => setStep("glad"), 3200);
+    return () => clearTimeout(t);
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== "hugAnim") return;
+    const t = setTimeout(() => setStep("hugMsg"), 3400);
     return () => clearTimeout(t);
   }, [step]);
 
@@ -457,6 +555,28 @@ function AskFlow({ onClose }) {
       <button className="ask-close" onClick={onClose} aria-label="Close">✕</button>
 
       <AnimatePresence mode="wait">
+        {step === "hug" && (
+          <Ticket
+            key="hug"
+            stub={
+              <div className="stub-choices">
+                <Btn onClick={() => setStep("q")}>{A.hugYes}</Btn>
+                <Btn ghost onClick={() => setStep("hugAnim")}>{A.hugNo}</Btn>
+              </div>
+            }
+          >
+            <h2>{A.hugAsk}</h2>
+          </Ticket>
+        )}
+
+        {step === "hugAnim" && <HugAnim key="hugAnim" />}
+
+        {step === "hugMsg" && (
+          <Ticket key="hugMsg" stub={<NextBtn onClick={() => setStep("q")} />}>
+            <p className="ticket-wish">{A.hugMsg}</p>
+          </Ticket>
+        )}
+
         {step === "q" && (
           <Ticket
             key="q"
@@ -504,6 +624,236 @@ function AskFlow({ onClose }) {
 
 /* ------------------------------- app ------------------------------- */
 
+/* ---------------------------- memories strip ---------------------------- */
+
+function Memories({ onOpen }) {
+  const trackRef = useRef(null);
+  const nudge = (dir) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.min(el.clientWidth * 0.8, 620), behavior: "smooth" });
+  };
+
+  return (
+    <section className="memories wide">
+      <Reveal as="h3">Our memories</Reveal>
+      <Reveal as="p" className="strip-hint" y={30} start={1} end={0.8}>
+        Swipe or use the arrows &rarr;
+      </Reveal>
+
+      <div className="strip-wrap">
+        <button className="strip-arrow left" onClick={() => nudge(-1)} aria-label="Previous photos">
+          &#8249;
+        </button>
+
+        <div className="strip" ref={trackRef} tabIndex={0} aria-label="Memories, scroll sideways">
+          {CONFIG.memories.map((m, i) => (
+            <motion.div
+              key={m.caption}
+              className={`frame strip-item ${m.src ? "clickable" : ""}`}
+              style={{ rotate: i % 2 ? 1.2 : -1.2 }}
+              onClick={() => m.src && onOpen(m)}
+              whileHover={{
+                rotate: 0,
+                y: -6,
+                scale: 1.02,
+                transition: { type: "spring", stiffness: 300, damping: 20 },
+              }}
+            >
+              {m.src ? <img src={m.src} alt={m.caption} loading="lazy" /> : <div className="ph">Add photo</div>}
+              <span>{m.caption}</span>
+            </motion.div>
+          ))}
+
+          <div className="frame strip-item end-frame" style={{ rotate: CONFIG.memories.length % 2 ? 1.2 : -1.2 }}>
+            <div className="end-body">
+              <p>{CONFIG.memoriesEnd}</p>
+            </div>
+            <span>&hearts;</span>
+          </div>
+        </div>
+
+        <button className="strip-arrow right" onClick={() => nudge(1)} aria-label="Next photos">
+          &#8250;
+        </button>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------------------- envelope letters ---------------------------- */
+
+function Envelope({ open }) {
+  return (
+    <div className="env">
+      <div className="env-back" />
+      <motion.div
+        className="env-note"
+        initial={false}
+        animate={{ y: open ? "-42%" : "0%" }}
+        transition={{ duration: 0.7, ease: EASE, delay: open ? 0.45 : 0 }}
+      />
+      <div className="env-front" />
+      <motion.div
+        className="env-flap"
+        initial={false}
+        animate={{ rotateX: open ? 180 : 0, zIndex: open ? 0 : 3 }}
+        transition={{
+          rotateX: { duration: 0.7, ease: EASE },
+          zIndex: { delay: open ? 0.3 : 0, duration: 0 },
+        }}
+      />
+      <motion.span
+        className="env-seal"
+        initial={false}
+        animate={{ opacity: open ? 0 : 1, scale: open ? 0.6 : 1 }}
+        transition={{ duration: 0.25 }}
+      >
+        &hearts;
+      </motion.span>
+    </div>
+  );
+}
+
+function LetterModal({ letter, onClose }) {
+  const [stage, setStage] = useState("closed"); // closed -> opening -> paper
+  const scrollRef = useRef(null);
+  const [edges, setEdges] = useState({ top: false, bottom: false });
+
+  const updateEdges = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setEdges({
+      top: el.scrollTop > 6,
+      bottom: el.scrollTop + el.clientHeight < el.scrollHeight - 6,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (stage !== "paper") return;
+    updateEdges();
+    window.addEventListener("resize", updateEdges);
+    return () => window.removeEventListener("resize", updateEdges);
+  }, [stage, updateEdges]);
+
+  useEffect(() => {
+    document.body.classList.add("modal-open");
+    const t1 = setTimeout(() => setStage("opening"), 450);
+    const t2 = setTimeout(() => setStage("paper"), 1700);
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("modal-open");
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  return (
+    <motion.div
+      className="ask-overlay"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="letter-stage" onClick={(e) => e.stopPropagation()}>
+        <motion.div
+          className="env-big"
+          initial={{ opacity: 0, y: 40, scale: 0.9 }}
+          animate={
+            stage === "paper"
+              ? { opacity: 0, y: 90, scale: 0.9 }
+              : { opacity: 1, y: 0, scale: 1 }
+          }
+          transition={{ duration: 0.6, ease: EASE }}
+          style={{ pointerEvents: "none" }}
+        >
+          <Envelope open={stage !== "closed"} />
+        </motion.div>
+
+        {stage === "paper" && (
+          <motion.div
+            className="paper-wrap"
+            initial={{ opacity: 0, y: 160, scale: 0.55 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.9, ease: EASE }}
+          >
+            <article className="paper" ref={scrollRef} onScroll={updateEdges} tabIndex={0}>
+              <h2>{letter.title}</h2>
+              {letter.body.map((p, i) => (
+                <motion.p
+                  key={i}
+                  initial={{ opacity: 0, y: 18 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ root: scrollRef, once: true, amount: 0.1 }}
+                  transition={{ duration: 0.6, ease: EASE }}
+                >
+                  {p}
+                </motion.p>
+              ))}
+              <motion.p
+                className="paper-sign"
+                initial={{ opacity: 0, y: 18 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ root: scrollRef, once: true, amount: 0.1 }}
+                transition={{ duration: 0.6, ease: EASE }}
+              >
+                &mdash; {CONFIG.from}
+              </motion.p>
+            </article>
+            <div className={`paper-fade top ${edges.top ? "on" : ""}`} aria-hidden="true" />
+            <div className={`paper-fade bottom ${edges.bottom ? "on" : ""}`} aria-hidden="true" />
+          </motion.div>
+        )}
+      </div>
+
+      <button className="ask-close" onClick={onClose} aria-label="Close letter">
+        &#10005;
+      </button>
+    </motion.div>
+  );
+}
+
+const TILTS = [-2, 1.5, -1, 2, -1.5];
+
+function Letters() {
+  const [active, setActive] = useState(null);
+  const close = useCallback(() => setActive(null), []);
+
+  return (
+    <section className="letters">
+      <Reveal as="h3">Letters for you</Reveal>
+      <Reveal as="p" className="letters-sub" y={30} start={1} end={0.8}>
+        Tap an envelope to open it.
+      </Reveal>
+
+      <div className="envelopes">
+        {CONFIG.letters.map((l, i) => (
+          <Reveal key={l.label} y={70} start={1} end={0.72}>
+            <motion.button
+              className="env-btn"
+              style={{ rotate: TILTS[i % TILTS.length] }}
+              whileHover={{ y: -8, rotate: 0 }}
+              whileTap={{ scale: 0.97 }}
+              transition={SPRING}
+              onClick={() => setActive(l)}
+              aria-label={`Open letter from ${l.label}`}
+            >
+              <Envelope open={false} />
+              <span className="env-label">{l.label}</span>
+            </motion.button>
+          </Reveal>
+        ))}
+      </div>
+
+      <AnimatePresence>{active && <LetterModal key="letter" letter={active} onClose={close} />}</AnimatePresence>
+    </section>
+  );
+}
+
 export default function App() {
   // 0-3 = intro cards, 4 = site expanding from the button, 5 = site
   const [step, setStep] = useState(0);
@@ -511,6 +861,9 @@ export default function App() {
   const [origin, setOrigin] = useState({ x: 0, y: 0, r: 0 });
   const [lightbox, setLightbox] = useState(null);
   const [askOpen, setAskOpen] = useState(false);
+  const [checked, setChecked] = useState(() => CONFIG.checklist.map((c) => c.done));
+  const hugIndex = CONFIG.checklist.findIndex((c) => /hug/i.test(c.label));
+  const hugged = hugIndex < 0 || checked[hugIndex];
   const closeAsk = useCallback(() => setAskOpen(false), []);
   const [playing, setPlaying] = useState(false);
   const [hasAudio, setHasAudio] = useState(true);
@@ -676,7 +1029,7 @@ export default function App() {
             </motion.header>
 
             <section className="letter">
-              <Reveal as="h3">For you</Reveal>
+              <Reveal as="h3">Hey Love!</Reveal>
               {CONFIG.letter.map((para, i) => (
                 <Reveal as="p" key={i} y={50} start={0.95 - i * 0.1} end={0.55 - i * 0.1}>
                   {para}
@@ -695,35 +1048,11 @@ export default function App() {
 
             <Cake />
 
-            <section className="memories">
-              <Reveal as="h3">Our memories</Reveal>
-              <div className="grid">
-                {CONFIG.memories.map((m, i) => (
-                  <Reveal key={m.caption} y={90} start={0.95 - (i % 3) * 0.12} end={0.55 - (i % 3) * 0.12}>
-                    <motion.div
-                      className={`frame ${m.src ? "clickable" : ""}`}
-                      style={{ rotate: i % 2 ? 1.2 : -1.2 }}
-                      onClick={() => m.src && setLightbox(m)}
-                      whileHover={{
-                        rotate: 0,
-                        y: -6,
-                        scale: 1.02,
-                        transition: { type: "spring", stiffness: 300, damping: 20 },
-                      }}
-                    >
-                      {m.src ? (
-                        <img src={m.src} alt={m.caption} loading="lazy" />
-                      ) : (
-                        <div className="ph">Add photo</div>
-                      )}
-                      <span>{m.caption}</span>
-                    </motion.div>
-                  </Reveal>
-                ))}
-              </div>
-            </section>
+            <Memories onOpen={setLightbox} />
 
-            <Checklist />
+            <Letters />
+
+            <Checklist done={checked} setDone={setChecked} />
 
             <Reveal as="section" className="ask" y={40} start={1} end={0.85}>
               <motion.button
@@ -746,7 +1075,7 @@ export default function App() {
         )}
 
         {/* ASK FLOW */}
-        <AnimatePresence>{askOpen && <AskFlow key="ask" onClose={closeAsk} />}</AnimatePresence>
+        <AnimatePresence>{askOpen && <AskFlow key="ask" onClose={closeAsk} hugged={hugged} />}</AnimatePresence>
 
         {/* LIGHTBOX */}
         <AnimatePresence>
