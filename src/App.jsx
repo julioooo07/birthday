@@ -22,7 +22,7 @@ const CONFIG = {
   from: "Hulyo",
   // Site opens at this moment (12:00 AM, Dec 1 2026, Philippine time)
   unlockAt: "2026-12-01T00:00:00+08:00",
-  // Type this on the countdown screen to skip the timer (set to "" to disable)
+  // Type this on the countdown screen to reveal the bypass button (set to "" to disable)
   bypassCode: "leyley",
   letter: [
     "Happy Happy Birthday My love!!! You’ve gone through so much with me, and without me, your whole life is such a beautiful thing to explore alam mo ba ‘yon?",
@@ -397,6 +397,7 @@ const music = (() => {
   let snapshot = { ...state };
   let started = false;
   let unlockOff = null;
+  let switchId = 0;
 
   const emit = () => {
     snapshot = { ...state };
@@ -429,8 +430,11 @@ const music = (() => {
   };
   // start the current track (fading in); resolves false if the browser blocks it
   const playCurrent = () => {
-    const a = audioFor(state.track);
+    const name = state.track;
+    const a = audioFor(name);
     if (!a || !state.enabled) return Promise.resolve(false);
+    // another song is still fading out: wait, switchTo starts this one once it has stopped
+    if (Object.entries(audios).some(([n, x]) => n !== name && !x.paused)) return Promise.resolve(true);
     if (!a.paused) {
       fade(a, VOLUME, FADE_MS);
       return Promise.resolve(true);
@@ -439,6 +443,11 @@ const music = (() => {
     return a
       .play()
       .then(() => {
+        if (state.track !== name || !state.enabled) {
+          // the track changed (or music was paused) while the browser was starting this one
+          a.pause();
+          return false;
+        }
         fade(a, VOLUME, FADE_MS);
         state.playing = true;
         emit();
@@ -472,15 +481,34 @@ const music = (() => {
       started = true;
       playCurrent().then((ok) => !ok && armUnlock());
     },
+    // make sure the current track is playing; if the browser blocks it, start on the next click/key
+    ensure() {
+      playCurrent().then((ok) => !ok && armUnlock());
+    },
+    // one song at a time: fade the old one out, pause it, then start the new one
     switchTo(name) {
       if (state.track === name) return;
       const prev = audioFor(state.track);
       state.track = name;
-      if (prev && !prev.paused) fade(prev, 0, FADE_MS, () => prev.pause());
-      const next = audioFor(name);
-      if (next && state.enabled) {
+      const id = ++switchId;
+      const startNext = () => {
+        if (id !== switchId) return; // a newer switch took over
+        const next = audioFor(name);
+        if (!next) {
+          state.playing = false;
+          emit();
+          return;
+        }
         next.currentTime = 0;
-        playCurrent().then((ok) => !ok && armUnlock());
+        if (state.enabled) playCurrent().then((ok) => !ok && armUnlock());
+      };
+      if (prev && !prev.paused) {
+        fade(prev, 0, 900, () => {
+          prev.pause();
+          startNext();
+        });
+      } else {
+        startNext();
       }
       emit();
     },
@@ -1219,7 +1247,6 @@ function TiedLetter() {
 /* ---------------------------- countdown gate ---------------------------- */
 
 const UNLOCK_AT = new Date(CONFIG.unlockAt).getTime();
-const BYPASS_KEY = "bday-bypass";
 
 function timeParts(ms) {
   const t = Math.max(0, Math.floor(ms / 1000));
@@ -1235,6 +1262,7 @@ function Gate({ left, onBypass }) {
   const [revealed, setRevealed] = useState(false);
   const typed = useRef("");
   const parts = timeParts(left);
+  const ready = left <= 0;
 
   // Typing the secret code anywhere on the page makes the bypass button appear
   useEffect(() => {
@@ -1261,8 +1289,8 @@ function Gate({ left, onBypass }) {
           transition={{ duration: 0.6, ease: EASE }}
         >
           <div className="step">
-            <h1 className="big">Not just yet, {CONFIG.nickname}…</h1>
-            <p className="gate-sub">Something special opens on December 1.</p>
+            <h1 className="big">{ready ? `It’s time, ${CONFIG.nickname}!` : `Not just yet, ${CONFIG.nickname}…`}</h1>
+            <p className="gate-sub">{ready ? "Your surprise is ready." : "Something special opens on December 1."}</p>
 
             <div className="count" role="timer" aria-live="off">
               {Object.entries(parts).map(([label, value]) => (
@@ -1285,13 +1313,13 @@ function Gate({ left, onBypass }) {
 
             <div className="code-area">
               <AnimatePresence>
-                {revealed && (
+                {(revealed || ready) && (
                   <motion.div
                     initial={{ opacity: 0, y: 12, scale: 0.9 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ type: "spring", stiffness: 260, damping: 18 }}
                   >
-                    <Btn onClick={onBypass}>Hey Hulyo</Btn>
+                    <Btn onClick={onBypass}>{ready ? "Open it" : "Hey Hulyo"}</Btn>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1314,6 +1342,11 @@ function Birthday() {
   const hugIndex = CONFIG.checklist.findIndex((c) => /hug/i.test(c.label));
   const hugged = hugIndex < 0 || checked[hugIndex];
   const closeAsk = useCallback(() => setAskOpen(false), []);
+
+  // "Are you Ashley Nicole?" opens -> Little Things plays
+  useEffect(() => {
+    music.ensure();
+  }, []);
 
   const { scrollY, scrollYProgress } = useScroll();
   const bgY = useTransform(scrollY, [0, 900], [0, 140]);
@@ -1538,36 +1571,24 @@ function Birthday() {
 }
 
 export default function App() {
-  const [bypassed, setBypassed] = useState(() => {
-    try {
-      return sessionStorage.getItem(BYPASS_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
+  // Unlock lives only in memory: every reload / restart starts on the countdown again.
+  const [unlocked, setUnlocked] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => music.init(), []);
 
   useEffect(() => {
-    if (bypassed) return;
+    if (unlocked) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [bypassed]);
+  }, [unlocked]);
 
-  const bypass = () => {
-    try {
-      sessionStorage.setItem(BYPASS_KEY, "1");
-    } catch {
-      /* storage unavailable: bypass still works for this visit */
-    }
-    setBypassed(true);
-  };
-
-  const left = UNLOCK_AT - now;
   return (
     <>
-      {bypassed || left <= 0 ? <Birthday /> : <Gate left={left} onBypass={bypass} />}
+      {unlocked ? <Birthday /> : <Gate left={UNLOCK_AT - now} onBypass={() => {
+          music.ensure(); // runs inside the click, so the browser allows sound
+          setUnlocked(true);
+        }} />}
       <MusicButton />
     </>
   );
