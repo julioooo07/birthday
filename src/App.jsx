@@ -1289,8 +1289,8 @@ function Gate({ left, onBypass }) {
           transition={{ duration: 0.6, ease: EASE }}
         >
           <div className="step">
-            <h1 className="big">{ready ? `It’s time, ${CONFIG.nickname}!` : `Not just yet, ${CONFIG.nickname}…`}</h1>
-            <p className="gate-sub">{ready ? "Your surprise is ready." : "Something special opens on December 1."}</p>
+            <h1 className="big">{ready ? `It’s time, ${CONFIG.nickname}!` : `BAWAL PA BLEEEE`}</h1>
+            <p className="gate-sub">{ready ? "Your surprise is ready." : "sa December 1 pa bye."}</p>
 
             <div className="count" role="timer" aria-live="off">
               {Object.entries(parts).map(([label, value]) => (
