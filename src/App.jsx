@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AnimatePresence,
   MotionConfig,
   motion,
   useInView,
-  useReducedMotion,
   useScroll,
   useSpring,
   useTransform,
@@ -15,7 +14,7 @@ import mainPic from "./assets/MainPic.jpg";
 /* ------------------------------------------------------------------
    EDIT YOUR CONTENT HERE
    - Photos: put images in /public and set src, e.g. "/photo1.jpg"
-   - Music (optional): put a file at /public/music.mp3
+   - Music: put the mp3 files in src/music (see the "music engine" below)
 ------------------------------------------------------------------- */
 const CONFIG = {
   name: "Ashley Nicole",
@@ -25,7 +24,6 @@ const CONFIG = {
   unlockAt: "2026-12-01T00:00:00+08:00",
   // Type this on the countdown screen to skip the timer (set to "" to disable)
   bypassCode: "leyley",
-  music: "/music.mp3",
   letter: [
     "Happy Happy Birthday My love!!! You’ve gone through so much with me, and without me, your whole life is such a beautiful thing to explore alam mo ba ‘yon?",
     "Knowing you for just how long made me realize already about what kind of person you are, and now that I’m courting you, I wanna know more and I want to build a genuine connection with you that exceeds the bounderies of our friendship.",
@@ -151,18 +149,59 @@ const heroChild = {
 // Fades and slides in gradually, tied to how far she has scrolled
 function Reveal({ as = "div", y = 80, start = 1, end = 0.5, className, children }) {
   const ref = useRef(null);
-  const reduce = useReducedMotion();
   const { scrollYProgress } = useScroll({ target: ref, offset: [`0 ${start}`, `0 ${end}`] });
   const p = useSpring(scrollYProgress, { stiffness: 90, damping: 28, mass: 0.5 });
   const opacity = useTransform(p, [0, 1], [0, 1]);
   const translateY = useTransform(p, [0, 1], [y, 0]);
   const Tag = motion[as];
 
-  if (reduce) return <Tag className={className}>{children}</Tag>;
   return (
     <Tag ref={ref} className={className} style={{ opacity, y: translateY }}>
       {children}
     </Tag>
+  );
+}
+
+/* ---------------------------- drifting clouds ---------------------------- */
+
+const CLOUDS = [
+  { top: 6, w: 260, dur: 52, phase: 0.1, op: 0.28, blur: 0 },
+  { top: 18, w: 180, dur: 70, phase: 0.55, op: 0.18, blur: 1.5 },
+  { top: 30, w: 340, dur: 46, phase: 0.8, op: 0.22, blur: 0 },
+  { top: 44, w: 200, dur: 84, phase: 0.3, op: 0.14, blur: 2 },
+  { top: 12, w: 140, dur: 38, phase: 0.95, op: 0.24, blur: 1 },
+  { top: 52, w: 300, dur: 64, phase: 0.65, op: 0.16, blur: 1.5 },
+  { top: 24, w: 220, dur: 44, phase: 0.4, op: 0.2, blur: 0.5 },
+];
+
+function Clouds() {
+  return (
+    <div className="clouds" aria-hidden="true">
+      {CLOUDS.map((c, i) => (
+        <div
+          key={i}
+          className="cloud"
+          style={{
+            top: `${c.top}%`,
+            width: c.w,
+            opacity: c.op,
+            filter: c.blur ? `blur(${c.blur}px)` : undefined,
+            "--dur": `${c.dur}s`,
+            "--delay": `${-c.dur * c.phase}s`,
+            "--rest": `${c.phase * 90}vw`,
+          }}
+        >
+          <svg viewBox="0 0 220 90" className="cloud-svg" style={{ "--bob": `${5 + (i % 3) * 2}s` }}>
+            <g>
+              <ellipse cx="110" cy="68" rx="102" ry="20" />
+              <circle cx="60" cy="54" r="26" />
+              <circle cx="104" cy="38" r="34" />
+              <circle cx="150" cy="52" r="27" />
+            </g>
+          </svg>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -173,17 +212,19 @@ function Tulips({ mode }) {
         <motion.div
           className="tulip"
           key={i}
-          style={{ left: `${t.left}%`, originX: 0.5, originY: 1, "--sway": `${t.sway}s` }}
+          style={{ left: `${t.left}%`, originX: 0.5, originY: 1, "--sway": `${t.sway}s`, "--wind": `${-(t.left / 100) * 4}s`, "--lag": `${(t.left / 100) * 1.4}s` }}
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: t.scale, opacity: 1 }}
           transition={{ type: "spring", stiffness: 80, damping: 11, delay: t.delay }}
         >
           <svg viewBox="0 0 40 100" className="tulip-svg">
-            <path className="stem" d="M20 100 C19 80 21 62 20 40" />
-            <path className="leaf" d="M20 92 C8 86 6 70 9 60 C16 66 20 78 20 92 Z" />
-            <path className="leaf" d="M20 88 C32 82 34 68 31 58 C24 64 20 74 20 88 Z" />
-            <path className={`petal ${t.tone}`} d="M20 40 C7 38 5 20 9 8 L15 17 L20 4 L25 17 L31 8 C35 20 33 38 20 40 Z" />
-            <path className="petal-front" d="M20 40 C14 36 14 22 20 4 C26 22 26 36 20 40 Z" />
+            <g className="gust">
+              <path className="stem" d="M20 100 C19 80 21 62 20 40" />
+              <path className="leaf" d="M20 92 C8 86 6 70 9 60 C16 66 20 78 20 92 Z" />
+              <path className="leaf" d="M20 88 C32 82 34 68 31 58 C24 64 20 74 20 88 Z" />
+              <path className={`petal ${t.tone}`} d="M20 40 C7 38 5 20 9 8 L15 17 L20 4 L25 17 L31 8 C35 20 33 38 20 40 Z" />
+              <path className="petal-front" d="M20 40 C14 36 14 22 20 4 C26 22 26 36 20 40 Z" />
+            </g>
           </svg>
         </motion.div>
       ))}
@@ -323,21 +364,149 @@ function Cake() {
   );
 }
 
-function MusicButton({ audioRef, playing, setPlaying }) {
-  const toggle = () => {
-    const a = audioRef.current;
-    if (!a) return;
-    if (playing) {
-      a.pause();
-      setPlaying(false);
-    } else {
-      a.play().then(() => setPlaying(true)).catch(() => {});
-    }
+/* ---------------------------- music engine ----------------------------
+   Little Things plays as soon as the browser allows it (browsers block sound
+   until the first click / key press), then crossfades into I Like Me Better
+   when the birthday page opens. Files are found by name in src/music.
+------------------------------------------------------------------------- */
+
+const musicFiles = import.meta.glob("./music/*.{mp3,m4a,wav,ogg}", {
+  eager: true,
+  query: "?url",
+  import: "default",
+});
+const findTrack = (re) => Object.entries(musicFiles).find(([path]) => re.test(path))?.[1] || "";
+const TRACKS = {
+  intro: findTrack(/little things/i),
+  main: findTrack(/like me better/i),
+};
+if (import.meta.env.DEV && !(TRACKS.intro && TRACKS.main)) {
+  console.warn(
+    "[music] Could not find both songs in src/music. Found:",
+    Object.keys(musicFiles),
+    "- move the 'music' folder into birthday/src/"
+  );
+}
+const VOLUME = 0.6;
+const FADE_MS = 1600;
+
+const music = (() => {
+  const audios = {};
+  const listeners = new Set();
+  const state = { track: "intro", enabled: true, playing: false };
+  let snapshot = { ...state };
+  let started = false;
+  let unlockOff = null;
+
+  const emit = () => {
+    snapshot = { ...state };
+    listeners.forEach((l) => l());
   };
+  const audioFor = (name) => {
+    if (!TRACKS[name]) return null;
+    if (!audios[name]) {
+      const a = new Audio(TRACKS[name]);
+      a.loop = true;
+      a.preload = "auto";
+      a.volume = 0;
+      audios[name] = a;
+    }
+    return audios[name];
+  };
+  const fade = (a, to, ms, done) => {
+    clearInterval(a._fade);
+    const from = a.volume;
+    const steps = Math.max(1, Math.round(ms / 50));
+    let i = 0;
+    a._fade = setInterval(() => {
+      i += 1;
+      a.volume = Math.min(1, Math.max(0, from + ((to - from) * i) / steps));
+      if (i >= steps) {
+        clearInterval(a._fade);
+        done?.();
+      }
+    }, 50);
+  };
+  // start the current track (fading in); resolves false if the browser blocks it
+  const playCurrent = () => {
+    const a = audioFor(state.track);
+    if (!a || !state.enabled) return Promise.resolve(false);
+    if (!a.paused) {
+      fade(a, VOLUME, FADE_MS);
+      return Promise.resolve(true);
+    }
+    a.volume = 0;
+    return a
+      .play()
+      .then(() => {
+        fade(a, VOLUME, FADE_MS);
+        state.playing = true;
+        emit();
+        return true;
+      })
+      .catch(() => false);
+  };
+  const armUnlock = () => {
+    if (unlockOff) return;
+    const events = ["pointerdown", "keydown", "touchstart"];
+    const onFirst = (e) => {
+      if (e.target?.closest?.(".music")) return; // the music button handles itself
+      playCurrent().then((ok) => ok && unlockOff?.());
+    };
+    events.forEach((ev) => window.addEventListener(ev, onFirst));
+    unlockOff = () => {
+      events.forEach((ev) => window.removeEventListener(ev, onFirst));
+      unlockOff = null;
+    };
+  };
+
+  return {
+    subscribe: (l) => {
+      listeners.add(l);
+      return () => listeners.delete(l);
+    },
+    getSnapshot: () => snapshot,
+    hasAudio: () => Boolean(TRACKS.intro || TRACKS.main),
+    init() {
+      if (started) return;
+      started = true;
+      playCurrent().then((ok) => !ok && armUnlock());
+    },
+    switchTo(name) {
+      if (state.track === name) return;
+      const prev = audioFor(state.track);
+      state.track = name;
+      if (prev && !prev.paused) fade(prev, 0, FADE_MS, () => prev.pause());
+      const next = audioFor(name);
+      if (next && state.enabled) {
+        next.currentTime = 0;
+        playCurrent().then((ok) => !ok && armUnlock());
+      }
+      emit();
+    },
+    toggle() {
+      const a = audioFor(state.track);
+      if (!a) return;
+      if (state.playing) {
+        state.enabled = false;
+        state.playing = false;
+        emit();
+        fade(a, 0, 400, () => a.pause());
+      } else {
+        state.enabled = true;
+        playCurrent();
+      }
+    },
+  };
+})();
+
+function MusicButton() {
+  const { playing } = useSyncExternalStore(music.subscribe, music.getSnapshot);
+  if (!music.hasAudio()) return null;
   return (
     <motion.button
       className="music"
-      onClick={toggle}
+      onClick={() => music.toggle()}
       aria-label={playing ? "Pause music" : "Play music"}
       initial={{ opacity: 0, scale: 0.6 }}
       animate={{ opacity: 1, scale: 1 }}
@@ -687,7 +856,7 @@ function Memories({ onOpen }) {
 
 /* ---------------------------- envelope letters ---------------------------- */
 
-function Envelope({ open }) {
+function Envelope({ open, name }) {
   return (
     <div className="env">
       <div className="env-back" />
@@ -698,6 +867,7 @@ function Envelope({ open }) {
         transition={{ duration: 0.7, ease: EASE, delay: open ? 0.45 : 0 }}
       />
       <div className="env-front" />
+      {name && <span className="env-name">{name}</span>}
       <motion.div
         className="env-flap"
         initial={false}
@@ -821,40 +991,228 @@ function LetterModal({ letter, onClose }) {
   );
 }
 
-const TILTS = [-2, 1.5, -1, 2, -1.5];
+const RESTS = [-3, 4, -5, 2, -4];
 
 function Letters() {
+  // order[last] is the letter on top of the pile
+  const [order, setOrder] = useState(() => CONFIG.letters.map((_, i) => i).reverse());
   const [active, setActive] = useState(null);
-  const close = useCallback(() => setActive(null), []);
+  const activeRef = useRef(null);
+
+  const open = (i) => {
+    activeRef.current = i;
+    setActive(i);
+  };
+  const close = useCallback(() => {
+    const cur = activeRef.current;
+    if (cur !== null) setOrder((o) => [cur, ...o.filter((x) => x !== cur)]); // opened letter goes to the back
+    activeRef.current = null;
+    setActive(null);
+  }, []);
+  const bringToTop = (i) => setOrder((o) => [...o.filter((x) => x !== i), i]);
+
+  const topIndex = order[order.length - 1];
 
   return (
     <section className="letters">
       <Reveal as="h3">Letters for you</Reveal>
       <Reveal as="p" className="letters-sub" y={30} start={1} end={0.8}>
-        Tap an envelope to open it.
+        A little stack, just for you. Tap the top one to open it.
       </Reveal>
 
-      <div className="envelopes">
+      <Reveal y={70} start={1} end={0.72}>
+        <div className="pile">
+          {CONFIG.letters.map((l, i) => {
+            const d = order.length - 1 - order.indexOf(i); // 0 = top
+            const isTop = d === 0;
+            return (
+              <motion.button
+                key={l.label}
+                className="pile-item"
+                style={{ zIndex: 10 - d }}
+                disabled={!isTop}
+                tabIndex={isTop ? 0 : -1}
+                initial={false}
+                animate={{
+                  y: -d * 14,
+                  x: (d % 2 ? 1 : -1) * d * 6,
+                  rotate: isTop ? RESTS[i % RESTS.length] * 0.4 : RESTS[i % RESTS.length],
+                  scale: 1 - d * 0.035,
+                }}
+                whileHover={isTop ? { y: -d * 14 - 10, rotate: 0 } : undefined}
+                whileTap={isTop ? { scale: 0.97 } : undefined}
+                transition={SPRING}
+                onClick={() => isTop && open(i)}
+                aria-label={isTop ? `Open letter from ${l.label}` : undefined}
+              >
+                <Envelope open={false} name={l.label} />
+              </motion.button>
+            );
+          })}
+        </div>
+      </Reveal>
+
+      <div className="pile-nav" role="group" aria-label="Choose which letter is on top">
         {CONFIG.letters.map((l, i) => (
-          <Reveal key={l.label} y={70} start={1} end={0.72}>
-            <motion.button
-              className="env-btn"
-              style={{ rotate: TILTS[i % TILTS.length] }}
-              whileHover={{ y: -8, rotate: 0 }}
-              whileTap={{ scale: 0.97 }}
-              transition={SPRING}
-              onClick={() => setActive(l)}
-              aria-label={`Open letter from ${l.label}`}
-            >
-              <Envelope open={false} />
-              <span className="env-label">{l.label}</span>
-            </motion.button>
-          </Reveal>
+          <button
+            key={l.label}
+            className={`pile-chip ${topIndex === i ? "on" : ""}`}
+            onClick={() => bringToTop(i)}
+            aria-pressed={topIndex === i}
+          >
+            {l.label}
+          </button>
         ))}
       </div>
 
-      <AnimatePresence>{active && <LetterModal key="letter" letter={active} onClose={close} />}</AnimatePresence>
+      <AnimatePresence>
+        {active !== null && <LetterModal key="letter" letter={CONFIG.letters[active]} onClose={close} />}
+      </AnimatePresence>
     </section>
+  );
+}
+
+/* ---------------------------- tied scroll letter ---------------------------- */
+
+function TiedScroll({ stage, bodyH = 0, children }) {
+  const unrolled = stage === "unroll" || stage === "read";
+  return (
+    <div className="tscroll">
+      <div className="roller" />
+      {children && (
+        <motion.div
+          className="tpaper"
+          initial={false}
+          animate={{ height: unrolled ? bodyH : 0 }}
+          transition={{ duration: 1.3, ease: EASE }}
+        >
+          {children}
+        </motion.div>
+      )}
+      <div className="roller" />
+
+      <motion.div
+        className="tie"
+        initial={false}
+        animate={
+          stage === "tied"
+            ? { x: 0, y: 0, rotate: 0, opacity: 1 }
+            : { x: [0, -10, 10, 0, 170], y: [0, 0, 0, 0, 70], rotate: [0, -3, 3, 0, 16], opacity: [1, 1, 1, 1, 0] }
+        }
+        transition={{ duration: 1.1, times: [0, 0.2, 0.4, 0.55, 1], ease: "easeInOut" }}
+        style={{ pointerEvents: "none" }}
+      >
+        <div className="tie-band" />
+        <svg className="bow" viewBox="0 0 100 70" aria-hidden="true">
+          <path className="bow-tail" d="M47 38 C42 50 36 60 29 68 L43 66 L51 44 Z" />
+          <path className="bow-tail" d="M53 38 C58 50 64 60 71 68 L57 66 L49 44 Z" />
+          <path className="bow-loop" d="M50 35 C30 5 6 10 10 32 C13 52 36 46 50 35 Z" />
+          <path className="bow-loop" d="M50 35 C70 5 94 10 90 32 C87 52 64 46 50 35 Z" />
+          <circle className="bow-knot" cx="50" cy="36" r="7.5" />
+        </svg>
+      </motion.div>
+    </div>
+  );
+}
+
+function TiedLetterModal({ onClose }) {
+  const [stage, setStage] = useState("tied"); // tied -> untie -> unroll -> read
+  const scrollRef = useRef(null);
+  const [edges, setEdges] = useState({ top: false, bottom: false });
+  const bodyH = useMemo(() => Math.round(Math.min(window.innerHeight * 0.66, 620)), []);
+
+  const updateEdges = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setEdges({
+      top: el.scrollTop > 6,
+      bottom: el.scrollTop + el.clientHeight < el.scrollHeight - 6,
+    });
+  }, []);
+
+  useEffect(() => {
+    document.body.classList.add("modal-open");
+    const t1 = setTimeout(() => setStage("untie"), 700);
+    const t2 = setTimeout(() => setStage("unroll"), 1900);
+    const t3 = setTimeout(() => {
+      setStage("read");
+      updateEdges();
+    }, 3300);
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("modal-open");
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose, updateEdges]);
+
+  const reveal = {
+    initial: { opacity: 0, y: 18 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { root: scrollRef, once: true, amount: 0.1 },
+    transition: { duration: 0.6, ease: EASE },
+  };
+
+  return (
+    <motion.div
+      className="ask-overlay blur-overlay"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <motion.div
+        className="tscroll-modal"
+        onClick={(e) => e.stopPropagation()}
+        initial={{ opacity: 0, y: 50, scale: 0.85 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.6, ease: EASE }}
+      >
+        <TiedScroll stage={stage} bodyH={bodyH}>
+          <article className="paper" ref={scrollRef} onScroll={updateEdges} tabIndex={0}>
+            <h2>Hey Love!</h2>
+            {CONFIG.letter.map((p, i) => (
+              <motion.p key={i} {...reveal}>
+                {p}
+              </motion.p>
+            ))}
+            <motion.p className="paper-sign" {...reveal}>
+              &mdash; {CONFIG.from}
+            </motion.p>
+          </article>
+          <div className={`paper-fade top ${edges.top ? "on" : ""}`} aria-hidden="true" />
+          <div className={`paper-fade bottom ${edges.bottom ? "on" : ""}`} aria-hidden="true" />
+        </TiedScroll>
+      </motion.div>
+
+      <button className="ask-close" onClick={onClose} aria-label="Close letter">
+        &#10005;
+      </button>
+    </motion.div>
+  );
+}
+
+function TiedLetter() {
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => setOpen(false), []);
+  return (
+    <>
+      <motion.button
+        className="tied-btn"
+        whileHover={{ y: -6, rotate: -1 }}
+        whileTap={{ scale: 0.97 }}
+        transition={SPRING}
+        onClick={() => setOpen(true)}
+        aria-label="Untie the ribbon and read my letter"
+      >
+        <TiedScroll stage="tied" />
+      </motion.button>
+      <AnimatePresence>{open && <TiedLetterModal key="tied" onClose={close} />}</AnimatePresence>
+    </>
   );
 }
 
@@ -892,8 +1250,9 @@ function Gate({ left, onBypass }) {
   }, []);
 
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion="never">
       <div className="intro gate">
+        <Clouds />
         <Tulips mode="on-dark" />
         <motion.div
           className="intro-card gate-card"
@@ -902,8 +1261,8 @@ function Gate({ left, onBypass }) {
           transition={{ duration: 0.6, ease: EASE }}
         >
           <div className="step">
-            <h1 className="big">BAWAL PA BLEEE</h1>
-            <p className="gate-sub">Sa Dec 1 mo pa to maacess :P</p>
+            <h1 className="big">Not just yet, {CONFIG.nickname}…</h1>
+            <p className="gate-sub">Something special opens on December 1.</p>
 
             <div className="count" role="timer" aria-live="off">
               {Object.entries(parts).map(([label, value]) => (
@@ -955,9 +1314,6 @@ function Birthday() {
   const hugIndex = CONFIG.checklist.findIndex((c) => /hug/i.test(c.label));
   const hugged = hugIndex < 0 || checked[hugIndex];
   const closeAsk = useCallback(() => setAskOpen(false), []);
-  const [playing, setPlaying] = useState(false);
-  const [hasAudio, setHasAudio] = useState(true);
-  const audioRef = useRef(null);
 
   const { scrollY, scrollYProgress } = useScroll();
   const bgY = useTransform(scrollY, [0, 900], [0, 140]);
@@ -975,7 +1331,7 @@ function Birthday() {
     const r = Math.max(Math.hypot(x, y), Math.hypot(w - x, y), Math.hypot(x, h - y), Math.hypot(w - x, h - y));
     setOrigin({ x, y, r });
     setStep(4);
-    audioRef.current?.play().then(() => setPlaying(true)).catch(() => {});
+    music.switchTo("main");
   };
 
   useEffect(() => {
@@ -1047,18 +1403,11 @@ function Birthday() {
   };
 
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion="never">
       <div className={`app ${step === 4 ? "opening" : ""}`}>
-        <audio
-          ref={audioRef}
-          src={CONFIG.music}
-          loop
-          preload="auto"
-          onError={() => setHasAudio(false)}
-        />
-
         {/* INTRO */}
         <div className={`intro ${step === 5 ? "hide" : ""}`}>
+          <Clouds />
           <Tulips mode="on-dark" />
           <motion.div
             className="intro-card"
@@ -1120,19 +1469,11 @@ function Birthday() {
 
             <section className="letter">
               <Reveal as="h3">Hey Love!</Reveal>
-              {CONFIG.letter.map((para, i) => (
-                <Reveal as="p" key={i} y={50} start={0.95 - i * 0.1} end={0.55 - i * 0.1}>
-                  {para}
-                </Reveal>
-              ))}
-              <Reveal
-                as="p"
-                className="sign"
-                y={50}
-                start={0.95 - CONFIG.letter.length * 0.1}
-                end={0.55 - CONFIG.letter.length * 0.1}
-              >
-                — {CONFIG.from}
+              <Reveal as="p" className="letter-sub" y={30} start={1} end={0.8}>
+                I wrote you something. Untie the ribbon to read it.
+              </Reveal>
+              <Reveal y={60} start={1} end={0.75}>
+                <TiedLetter />
               </Reveal>
             </section>
 
@@ -1160,9 +1501,6 @@ function Birthday() {
         </motion.div>
 
         {step === 5 && <motion.div className="progress" style={{ scaleX: progress }} />}
-        {step === 5 && hasAudio && (
-          <MusicButton audioRef={audioRef} playing={playing} setPlaying={setPlaying} />
-        )}
 
         {/* ASK FLOW */}
         <AnimatePresence>{askOpen && <AskFlow key="ask" onClose={closeAsk} hugged={hugged} />}</AnimatePresence>
@@ -1209,6 +1547,8 @@ export default function App() {
   });
   const [now, setNow] = useState(() => Date.now());
 
+  useEffect(() => music.init(), []);
+
   useEffect(() => {
     if (bypassed) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -1225,6 +1565,10 @@ export default function App() {
   };
 
   const left = UNLOCK_AT - now;
-  if (bypassed || left <= 0) return <Birthday />;
-  return <Gate left={left} onBypass={bypass} />;
+  return (
+    <>
+      {bypassed || left <= 0 ? <Birthday /> : <Gate left={left} onBypass={bypass} />}
+      <MusicButton />
+    </>
+  );
 }

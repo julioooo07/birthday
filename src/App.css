@@ -127,7 +127,7 @@ body.locked { overflow: hidden; height: 100vh; }
   height: 100%;
   overflow: visible;
   transform-origin: 50% 100%;
-  animation: sway var(--sway) ease-in-out infinite alternate;
+  animation: sway var(--sway) ease-in-out var(--wind, 0s) infinite alternate;
 }
 .tulip .stem { fill: none; stroke: var(--stem); stroke-width: 2.5; stroke-linecap: round; }
 .tulip .leaf { fill: var(--leaf); }
@@ -136,8 +136,44 @@ body.locked { overflow: hidden; height: 100vh; }
 .tulip .petal-front { fill: var(--front); }
 
 @keyframes sway {
-  from { transform: rotate(-3deg); }
-  to { transform: rotate(3deg); }
+  from { transform: rotate(-4deg) skewX(-1deg); }
+  to { transform: rotate(4deg) skewX(1deg); }
+}
+
+/* a gust of wind sweeps across the tulips (left to right) every 5 seconds */
+.tulip .gust {
+  transform-box: view-box;
+  transform-origin: 20px 100px;
+  animation: gust 5s ease-in-out var(--lag, 0s) infinite;
+}
+@keyframes gust {
+  0%, 50% { transform: rotate(0) skewX(0); }
+  60% { transform: rotate(22deg) skewX(-7deg); }
+  68% { transform: rotate(-8deg) skewX(2deg); }
+  76% { transform: rotate(10deg) skewX(-3deg); }
+  85% { transform: rotate(-3deg) skewX(1deg); }
+  100% { transform: rotate(0) skewX(0); }
+}
+
+/* petals breathe, leaves flutter */
+.tulip .petal,
+.tulip .petal-front {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: bloom 2.8s ease-in-out var(--wind, 0s) infinite alternate;
+}
+.tulip .leaf {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: flutter 2.2s ease-in-out var(--wind, 0s) infinite alternate;
+}
+@keyframes bloom {
+  from { transform: scale(1, 1); }
+  to { transform: scale(1.1, 0.95); }
+}
+@keyframes flutter {
+  from { transform: rotate(-5deg); }
+  to { transform: rotate(5deg); }
 }
 
 @media (max-width: 600px) {
@@ -279,9 +315,6 @@ footer {
   color: var(--blue);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .tulip-svg { animation: none; }
-}
 
 /* ---------- Scroll progress ---------- */
 .progress {
@@ -300,7 +333,7 @@ footer {
   position: fixed;
   right: 20px;
   bottom: 20px;
-  z-index: 60;
+  z-index: 150;
   width: 46px;
   height: 46px;
   display: grid;
@@ -397,9 +430,6 @@ footer {
 }
 .lightbox-close:hover { background: rgba(255, 255, 255, 0.28); }
 
-@media (prefers-reduced-motion: reduce) {
-  .flame-shape { animation: none; }
-}
 
 
 /* ---------- Checklist ---------- */
@@ -893,3 +923,193 @@ body.modal-open { overflow: hidden; }
 }
 .code-area { min-height: 56px; }
 @media (max-width: 420px) { .count { gap: 6px; } .count-unit span { font-size: 0.6rem; } }
+
+
+/* ---------- Drifting clouds ---------- */
+.clouds {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cloud {
+  position: absolute;
+  left: 0;
+  height: auto;
+  will-change: transform;
+  animation: drift var(--dur) linear var(--delay) infinite;
+}
+.cloud-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  fill: #fff;
+  animation: bob var(--bob, 6s) ease-in-out infinite alternate;
+}
+@keyframes drift {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(100vw); }
+}
+@keyframes bob {
+  from { transform: translateY(-6px); }
+  to { transform: translateY(6px); }
+}
+
+
+/* ---------- Stacked envelopes ---------- */
+.pile {
+  position: relative;
+  width: min(84vw, 380px);
+  aspect-ratio: 3 / 2;
+  margin: 76px auto 0;
+}
+.pile-item {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--navy);
+  cursor: default;
+}
+.pile-item:not(:disabled) { cursor: pointer; }
+.pile-item:focus-visible { outline: 3px solid var(--sky); outline-offset: 8px; border-radius: 10px; }
+.env-name {
+  position: absolute;
+  z-index: 4;
+  left: 0;
+  right: 0;
+  bottom: 15%;
+  text-align: center;
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 700;
+  font-size: clamp(1.4rem, 5vw, 1.8rem);
+  line-height: 1;
+  color: var(--navy);
+  pointer-events: none;
+}
+.pile-nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 34px;
+}
+.pile-chip {
+  padding: 6px 16px;
+  border: 2px solid var(--sky);
+  border-radius: 999px;
+  background: transparent;
+  font: 700 0.9rem var(--sans);
+  color: var(--blue);
+  cursor: pointer;
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+}
+.pile-chip:hover { background: var(--mist); }
+.pile-chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+.pile-chip:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+/* ---------- Blurred backdrop for the main letter ---------- */
+.blur-overlay {
+  background: rgba(8, 22, 58, 0.38);
+  -webkit-backdrop-filter: blur(18px) saturate(1.1);
+  backdrop-filter: blur(18px) saturate(1.1);
+}
+
+/* ---------- Tied scroll letter ---------- */
+.letter-sub {
+  margin: -12px 0 30px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.25rem !important;
+  color: var(--blue);
+}
+.tied-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+.tied-btn:focus-visible { outline: 3px solid var(--sky); outline-offset: 10px; border-radius: 12px; }
+.tied-btn .tscroll { --w: min(76vw, 320px); --roll: 32px; }
+.tied-btn:hover .bow { animation: bow-wiggle 0.6s ease-in-out; }
+@keyframes bow-wiggle {
+  0%, 100% { transform: translate(-50%, -50%) rotate(0); }
+  30% { transform: translate(-50%, -50%) rotate(-6deg); }
+  70% { transform: translate(-50%, -50%) rotate(6deg); }
+}
+
+.tscroll-modal { display: grid; place-items: center; }
+.tscroll {
+  --w: min(92vw, 660px);
+  --roll: 40px;
+  position: relative;
+  width: var(--w);
+  margin: 0 auto;
+  filter: drop-shadow(0 22px 36px rgba(0, 0, 0, 0.4));
+}
+.roller {
+  position: relative;
+  height: var(--roll);
+  border-radius: calc(var(--roll) / 2);
+  background: linear-gradient(180deg, #ece2cb 0%, #fffdf8 38%, #f6efdd 70%, #d9ccb0 100%);
+}
+.roller::before,
+.roller::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  width: calc(var(--roll) - 6px);
+  border-radius: 50%;
+  background: radial-gradient(circle, #d9ccb0 0 18%, #efe6d0 19% 40%, #d9ccb0 41% 48%, #f7f0e0 49%);
+}
+.roller::before { left: 3px; }
+.roller::after { right: 3px; }
+
+.tpaper {
+  position: relative;
+  width: 95%;
+  margin: 0 auto;
+  overflow: hidden;
+  background: #fffdf8;
+}
+.tpaper .paper {
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+}
+
+.tie {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: -10px;
+  bottom: -10px;
+  width: 20px;
+  margin-left: -10px;
+}
+.tie-band {
+  position: absolute;
+  inset: 0;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #2459c4, #5b92e8 50%, #2459c4);
+  box-shadow: 0 2px 6px rgba(15, 42, 92, 0.3);
+}
+.bow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(84px, 24vw, 120px);
+  transform: translate(-50%, -50%);
+  overflow: visible;
+  filter: drop-shadow(0 3px 5px rgba(15, 42, 92, 0.3));
+}
+.bow-loop { fill: #4f86ee; stroke: #2459c4; stroke-width: 2; }
+.bow-tail { fill: #3a74e8; stroke: #2459c4; stroke-width: 2; }
+.bow-knot { fill: #2f6fe4; stroke: #2459c4; stroke-width: 2; }
+.tied-btn .tie { top: -8px; bottom: -8px; width: 14px; margin-left: -7px; }
+.tied-btn .bow { width: 90px; }
