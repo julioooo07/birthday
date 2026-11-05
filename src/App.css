@@ -127,7 +127,9 @@ body.locked { overflow: hidden; height: 100vh; }
   height: 100%;
   overflow: visible;
   transform-origin: 50% 100%;
-  animation: sway var(--sway) ease-in-out var(--wind, 0s) infinite alternate;
+  will-change: transform;
+  /* gentle sway, then a gust of wind every 5s that sweeps left to right (--lag) */
+  animation: breeze 5s ease-in-out var(--lag, 0s) infinite;
 }
 .tulip .stem { fill: none; stroke: var(--stem); stroke-width: 2.5; stroke-linecap: round; }
 .tulip .leaf { fill: var(--leaf); }
@@ -135,45 +137,15 @@ body.locked { overflow: hidden; height: 100vh; }
 .tulip .petal.b { fill: var(--petal-b); }
 .tulip .petal-front { fill: var(--front); }
 
-@keyframes sway {
-  from { transform: rotate(-4deg) skewX(-1deg); }
-  to { transform: rotate(4deg) skewX(1deg); }
-}
-
-/* a gust of wind sweeps across the tulips (left to right) every 5 seconds */
-.tulip .gust {
-  transform-box: view-box;
-  transform-origin: 20px 100px;
-  animation: gust 5s ease-in-out var(--lag, 0s) infinite;
-}
-@keyframes gust {
-  0%, 50% { transform: rotate(0) skewX(0); }
-  60% { transform: rotate(22deg) skewX(-7deg); }
-  68% { transform: rotate(-8deg) skewX(2deg); }
-  76% { transform: rotate(10deg) skewX(-3deg); }
-  85% { transform: rotate(-3deg) skewX(1deg); }
-  100% { transform: rotate(0) skewX(0); }
-}
-
-/* petals breathe, leaves flutter */
-.tulip .petal,
-.tulip .petal-front {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: bloom 2.8s ease-in-out var(--wind, 0s) infinite alternate;
-}
-.tulip .leaf {
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-  animation: flutter 2.2s ease-in-out var(--wind, 0s) infinite alternate;
-}
-@keyframes bloom {
-  from { transform: scale(1, 1); }
-  to { transform: scale(1.1, 0.95); }
-}
-@keyframes flutter {
-  from { transform: rotate(-5deg); }
-  to { transform: rotate(5deg); }
+@keyframes breeze {
+  0%   { transform: rotate(-3deg) skewX(-1deg); }
+  25%  { transform: rotate(3deg) skewX(1deg); }
+  50%  { transform: rotate(-2deg) skewX(0); }
+  60%  { transform: rotate(22deg) skewX(-7deg); }
+  68%  { transform: rotate(-8deg) skewX(2deg); }
+  76%  { transform: rotate(10deg) skewX(-3deg); }
+  85%  { transform: rotate(-3deg) skewX(1deg); }
+  100% { transform: rotate(-3deg) skewX(-1deg); }
 }
 
 @media (max-width: 600px) {
@@ -196,6 +168,12 @@ body.locked { overflow: hidden; height: 100vh; }
   line-height: 1;
   filter: drop-shadow(0 6px 10px rgba(15, 42, 92, 0.18));
   opacity: 0.95;
+  will-change: translate;
+  animation: sticker-bob var(--d, 5s) ease-in-out var(--dl, 0s) infinite;
+}
+@keyframes sticker-bob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -8px; }
 }
 
 main { position: relative; z-index: 1; }
@@ -938,6 +916,7 @@ body.modal-open { overflow: hidden; }
   left: 0;
   height: auto;
   will-change: transform;
+  contain: layout paint;
   animation: drift var(--dur) linear var(--delay) infinite;
 }
 .cloud-svg {
@@ -1113,3 +1092,118 @@ body.modal-open { overflow: hidden; }
 .bow-knot { fill: #2f6fe4; stroke: #2459c4; stroke-width: 2; }
 .tied-btn .tie { top: -8px; bottom: -8px; width: 14px; margin-left: -7px; }
 .tied-btn .bow { width: 90px; }
+
+
+
+/* ---------- Memory viewer: polaroid + story ---------- */
+.frame.clickable { cursor: pointer; }
+.frame.clickable:focus-visible { outline: 3px solid var(--sky); outline-offset: 4px; }
+
+.memory-view {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 4vw, 48px);
+  max-width: 96vw;
+}
+.memory-lightbox .polaroid {
+  position: relative;
+  margin: 0;
+  padding: 14px 14px 0;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.45);
+  flex: none;
+}
+.memory-lightbox .polaroid img {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: min(46vw, 440px);
+  max-height: 62vh;
+  border-radius: 2px;
+  box-shadow: none;
+}
+.memory-lightbox .polaroid figcaption {
+  margin: 0;
+  padding: 16px 8px 20px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.5rem;
+  color: var(--navy);
+  text-align: center;
+}
+.tape {
+  position: absolute;
+  top: -13px;
+  left: 50%;
+  width: 96px;
+  height: 28px;
+  margin-left: -48px;
+  background: rgba(156, 196, 255, 0.7);
+  box-shadow: 0 2px 6px rgba(15, 42, 92, 0.18);
+  transform: rotate(-3deg);
+}
+
+.memory-note {
+  width: min(92vw, 360px);
+  max-height: min(74vh, 560px);
+  overflow-y: auto;
+  padding: 26px 26px 28px;
+  text-align: left;
+  color: var(--ink);
+  border-radius: 6px;
+  box-shadow: 0 26px 60px rgba(0, 0, 0, 0.4);
+  background-color: #fffdf8;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 29px, #d8e5fb 29px 30px);
+  background-attachment: local;
+  line-height: 30px;
+  scrollbar-width: thin;
+  scrollbar-color: #b9d0f5 transparent;
+}
+.note-kicker {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 30px;
+  color: var(--blue);
+}
+.memory-note h3 {
+  font-size: 1.9rem;
+  line-height: 30px;
+  margin: 0 0 30px;
+}
+.note-date {
+  margin-top: -30px;
+  margin-bottom: 30px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 30px;
+  color: #6f8cc4;
+}
+.note-text {
+  margin-bottom: 30px;
+  font-family: var(--serif);
+  font-size: 1.3rem;
+}
+
+@media (max-width: 760px) {
+  .memory-view {
+    flex-direction: column;
+    gap: 22px;
+    max-height: 94vh;
+    overflow-y: auto;
+    padding: 18px 0 8px;
+  }
+  .memory-lightbox .polaroid img { max-width: min(78vw, 320px); max-height: 36vh; }
+  .memory-note { max-height: none; overflow: visible; }
+}
+
+
+/* ---------- Smooth opening ---------- */
+.hero-bg { will-change: transform, opacity; transform: translateZ(0); }
+.app.opening .intro .cloud,
+.app.opening .intro .cloud-svg,
+.app.opening .intro .tulip-svg { animation-play-state: paused; }

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AnimatePresence,
   MotionConfig,
@@ -10,6 +10,16 @@ import {
 } from "motion/react";
 import "./App.css";
 import mainPic from "./assets/MainPic.jpg";
+import cling2 from "./assets/cling2.jpg";
+import clingy from "./assets/clingy.jpg";
+import conference from "./assets/conference.jpg";
+import herasakid from "./assets/herasakid.jpg";
+import lucban from "./assets/lucban.jpg";
+import mcdo from "./assets/mcdo.jpg";
+import myfavenastolen from "./assets/myfavenastolen.jpg";
+import shoes from "./assets/shoes.jpg";
+import shore from "./assets/shore.jpg";
+import withbabyalie from "./assets/withbabyalie.jpg";
 
 /* ------------------------------------------------------------------
    EDIT YOUR CONTENT HERE
@@ -51,26 +61,26 @@ const CONFIG = {
     final: "Happy Birthday, My love. I'll always be here, loving you. :)",
   },
   memories: [
-    { caption: "Our first picture", src: "" },
-    { caption: "Favorite date", src: "" },
-    { caption: "Silly moment", src: "" },
-    { caption: "Somewhere we went", src: "" },
-    { caption: "Your best smile", src: "" },
-    { caption: "Us, lately", src: "" },
-    { caption: "Memory 7", src: "" },
-    { caption: "Memory 8", src: "" },
-    { caption: "Memory 9", src: "" },
-    { caption: "Memory 10", src: "" },
-    { caption: "Memory 11", src: "" },
-    { caption: "Memory 12", src: "" },
-    { caption: "Memory 13", src: "" },
-    { caption: "Memory 14", src: "" },
-    { caption: "Memory 15", src: "" },
-    { caption: "Memory 16", src: "" },
-    { caption: "Memory 17", src: "" },
-    { caption: "Memory 18", src: "" },
-    { caption: "Memory 19", src: "" },
-    { caption: "Memory 20", src: "" },
+    { caption: "Clingy me", src: clingy, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "Still clingy", src: cling2, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "The conference", src: conference, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "Her, as a kid", src: herasakid, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "Lucban", src: lucban, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "Mcdo date", src: mcdo, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "My fave, stolen", src: myfavenastolen, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "New shoes", src: shoes, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "At the shore", src: shore, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "With baby Alie", src: withbabyalie, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
+    { caption: "Memory 11", src: "", date: "", story: [] },
+    { caption: "Memory 12", src: "", date: "", story: [] },
+    { caption: "Memory 13", src: "", date: "", story: [] },
+    { caption: "Memory 14", src: "", date: "", story: [] },
+    { caption: "Memory 15", src: "", date: "", story: [] },
+    { caption: "Memory 16", src: "", date: "", story: [] },
+    { caption: "Memory 17", src: "", date: "", story: [] },
+    { caption: "Memory 18", src: "", date: "", story: [] },
+    { caption: "Memory 19", src: "", date: "", story: [] },
+    { caption: "Memory 20", src: "", date: "", story: [] },
   ],
   memoriesEnd: "To more memories with you, Love",
   // 5 letters, each opens from its own envelope
@@ -185,7 +195,6 @@ function Clouds() {
             top: `${c.top}%`,
             width: c.w,
             opacity: c.op,
-            filter: c.blur ? `blur(${c.blur}px)` : undefined,
             "--dur": `${c.dur}s`,
             "--delay": `${-c.dur * c.phase}s`,
             "--rest": `${c.phase * 90}vw`,
@@ -237,14 +246,18 @@ function Sticker({ type, top, left, rot, i }) {
   const { src, fallback } = STICKERS[type];
   const common = {
     className: "sticker",
-    style: { top: `${top}%`, left: `${left}%`, rotate: rot },
-    animate: { y: [0, -8, 0] },
-    transition: { duration: 4 + (i % 4), repeat: Infinity, ease: "easeInOut", delay: (i % 3) * 0.5 },
+    style: {
+      top: `${top}%`,
+      left: `${left}%`,
+      rotate: `${rot}deg`,
+      "--d": `${4 + (i % 4)}s`,
+      "--dl": `${(i % 3) * 0.5}s`,
+    },
   };
   return failed ? (
-    <motion.span {...common}>{fallback}</motion.span>
+    <span {...common}>{fallback}</span>
   ) : (
-    <motion.img {...common} src={src} alt="" onError={() => setFailed(true)} />
+    <img {...common} src={src} alt="" decoding="async" onError={() => setFailed(true)} />
   );
 }
 
@@ -479,6 +492,8 @@ const music = (() => {
     init() {
       if (started) return;
       started = true;
+      audioFor("intro");
+      audioFor("main"); // starts buffering now, so the switch later is instant
       playCurrent().then((ok) => !ok && armUnlock());
     },
     // make sure the current track is playing; if the browser blocks it, start on the next click/key
@@ -854,6 +869,10 @@ function Memories({ onOpen }) {
               className={`frame strip-item ${m.src ? "clickable" : ""}`}
               style={{ rotate: i % 2 ? 1.2 : -1.2 }}
               onClick={() => m.src && onOpen(m)}
+              role={m.src ? "button" : undefined}
+              tabIndex={m.src ? 0 : undefined}
+              aria-label={m.src ? `Remember: ${m.caption}` : undefined}
+              onKeyDown={(e) => m.src && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen(m))}
               whileHover={{
                 rotate: 0,
                 y: -6,
@@ -861,7 +880,7 @@ function Memories({ onOpen }) {
                 transition: { type: "spring", stiffness: 300, damping: 20 },
               }}
             >
-              {m.src ? <img src={m.src} alt={m.caption} loading="lazy" /> : <div className="ph">Add photo</div>}
+              {m.src ? <img src={m.src} alt={m.caption} loading="lazy" decoding="async" /> : <div className="ph">Add photo</div>}
               <span>{m.caption}</span>
             </motion.div>
           ))}
@@ -1289,8 +1308,8 @@ function Gate({ left, onBypass }) {
           transition={{ duration: 0.6, ease: EASE }}
         >
           <div className="step">
-            <h1 className="big">{ready ? `It’s time, ${CONFIG.nickname}!` : `BAWAL PA BLEEEE`}</h1>
-            <p className="gate-sub">{ready ? "Your surprise is ready." : "sa December 1 pa bye."}</p>
+            <h1 className="big">{ready ? `It’s time, ${CONFIG.nickname}!` : `Not just yet, ${CONFIG.nickname}…`}</h1>
+            <p className="gate-sub">{ready ? "Your surprise is ready." : "Something special opens on December 1."}</p>
 
             <div className="count" role="timer" aria-live="off">
               {Object.entries(parts).map(([label, value]) => (
@@ -1331,6 +1350,74 @@ function Gate({ left, onBypass }) {
   );
 }
 
+/* ---------------------------- memory viewer (polaroid + story) ---------------------------- */
+
+function MemoryViewer({ memory, onClose }) {
+  useEffect(() => {
+    document.body.classList.add("modal-open");
+    const onKey = (e) => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.classList.remove("modal-open");
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [onClose]);
+
+  const story = (Array.isArray(memory.story) ? memory.story : [memory.story]).filter(Boolean);
+
+  return (
+    <motion.div
+      className="lightbox memory-lightbox"
+      onClick={onClose}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div className="memory-view" onClick={(e) => e.stopPropagation()}>
+        <motion.figure
+          className="polaroid"
+          initial={{ opacity: 0, y: -70, rotate: -12, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, rotate: -2, scale: 1 }}
+          exit={{ opacity: 0, y: 20, scale: 0.95 }}
+          transition={{ type: "spring", stiffness: 130, damping: 15 }}
+        >
+          <span className="tape" aria-hidden="true" />
+          <img src={memory.src} alt={memory.caption} />
+          <figcaption>{memory.caption}</figcaption>
+        </motion.figure>
+
+        <motion.aside
+          className="memory-note"
+          initial={{ opacity: 0, x: 50 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 20 }}
+          transition={{ delay: 0.35, duration: 0.6, ease: EASE }}
+        >
+          <p className="note-kicker">Remember this?</p>
+          <h3>{memory.caption}</h3>
+          {memory.date && <p className="note-date">{memory.date}</p>}
+          {story.map((p, i) => (
+            <p key={i} className="note-text">
+              {p}
+            </p>
+          ))}
+        </motion.aside>
+      </div>
+
+      <button className="lightbox-close" onClick={onClose} aria-label="Close photo">
+        &#10005;
+      </button>
+    </motion.div>
+  );
+}
+
+const CakeM = memo(Cake);
+const MemoriesM = memo(Memories);
+const LettersM = memo(Letters);
+const TiedLetterM = memo(TiedLetter);
+const StickerM = memo(Sticker);
+
 function Birthday() {
   // 0-3 = intro cards, 4 = site expanding from the button, 5 = site
   const [step, setStep] = useState(0);
@@ -1346,6 +1433,30 @@ function Birthday() {
   // "Are you Ashley Nicole?" opens -> Little Things plays
   useEffect(() => {
     music.ensure();
+  }, []);
+
+  // Build the (heavy) page in the background while she reads the intro cards,
+  // so nothing has to be created during the opening animation.
+  const [siteReady, setSiteReady] = useState(false);
+  useEffect(() => {
+    const go = () => setSiteReady(true);
+    const id = window.requestIdleCallback
+      ? window.requestIdleCallback(go, { timeout: 1200 })
+      : setTimeout(go, 600);
+    return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : clearTimeout(id));
+  }, []);
+  useEffect(() => {
+    // download + decode the big photos ahead of time, one at a time
+    const urls = [mainPic, ...CONFIG.memories.map((m) => m.src).filter(Boolean)];
+    const timers = urls.map((u, i) =>
+      setTimeout(() => {
+        const im = new Image();
+        im.decoding = "async";
+        im.src = u;
+        im.decode?.().catch(() => {});
+      }, 300 + i * 350)
+    );
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   const { scrollY, scrollYProgress } = useScroll();
@@ -1372,12 +1483,7 @@ function Birthday() {
     if (step === 4) window.scrollTo(0, 0);
   }, [step]);
 
-  useEffect(() => {
-    if (!lightbox) return;
-    const onKey = (e) => e.key === "Escape" && setLightbox(null);
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [lightbox]);
+  const closeLightbox = useCallback(() => setLightbox(null), []);
 
   const circle = (r) => `circle(${r}px at ${origin.x}px ${origin.y}px)`;
   const clip =
@@ -1439,7 +1545,8 @@ function Birthday() {
     <MotionConfig reducedMotion="never">
       <div className={`app ${step === 4 ? "opening" : ""}`}>
         {/* INTRO */}
-        <div className={`intro ${step === 5 ? "hide" : ""}`}>
+        {step < 5 && (
+        <div className="intro">
           <Clouds />
           <Tulips mode="on-dark" />
           <motion.div
@@ -1462,6 +1569,7 @@ function Birthday() {
             </AnimatePresence>
           </motion.div>
         </div>
+        )}
 
         {/* SITE */}
         <motion.div
@@ -1471,6 +1579,8 @@ function Birthday() {
           transition={step === 5 ? { duration: 0 } : { duration: 1.5, ease: [0.65, 0, 0.25, 1] }}
           onAnimationComplete={() => step === 4 && setStep(5)}
         >
+          {(siteReady || step >= 4) && (
+            <>
           <motion.div
             className="hero-bg"
             aria-hidden="true"
@@ -1484,7 +1594,7 @@ function Birthday() {
 
           <div className="sticker-layer" aria-hidden="true">
             {PLACEMENTS.map((p, i) => (
-              <Sticker key={i} i={i} {...p} />
+              <StickerM key={i} i={i} {...p} />
             ))}
           </div>
 
@@ -1506,15 +1616,15 @@ function Birthday() {
                 I wrote you something. Untie the ribbon to read it.
               </Reveal>
               <Reveal y={60} start={1} end={0.75}>
-                <TiedLetter />
+                <TiedLetterM />
               </Reveal>
             </section>
 
-            <Cake />
+            <CakeM />
 
-            <Memories onOpen={setLightbox} />
+            <MemoriesM onOpen={setLightbox} />
 
-            <Letters />
+            <LettersM />
 
             <Checklist done={checked} setDone={setChecked} />
 
@@ -1531,6 +1641,8 @@ function Birthday() {
 
             <footer aria-hidden="true" />
           </main>
+            </>
+          )}
         </motion.div>
 
         {step === 5 && <motion.div className="progress" style={{ scaleX: progress }} />}
@@ -1540,30 +1652,7 @@ function Birthday() {
 
         {/* LIGHTBOX */}
         <AnimatePresence>
-          {lightbox && (
-            <motion.div
-              className="lightbox"
-              onClick={() => setLightbox(null)}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <motion.figure
-                initial={{ opacity: 0, scale: 0.92, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 10 }}
-                transition={{ duration: 0.35, ease: EASE }}
-                onClick={(e) => e.stopPropagation()}
-              >
-                <img src={lightbox.src} alt={lightbox.caption} />
-                <figcaption>{lightbox.caption}</figcaption>
-              </motion.figure>
-              <button className="lightbox-close" onClick={() => setLightbox(null)} aria-label="Close photo">
-                ✕
-              </button>
-            </motion.div>
-          )}
+          {lightbox && <MemoryViewer key="memory" memory={lightbox} onClose={closeLightbox} />}
         </AnimatePresence>
       </div>
     </MotionConfig>
