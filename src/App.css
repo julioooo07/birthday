@@ -595,10 +595,12 @@ body.modal-open { overflow: hidden; }
 .strip:focus-visible { outline: 3px solid var(--sky); outline-offset: -3px; }
 .strip::-webkit-scrollbar { height: 8px; }
 .strip::-webkit-scrollbar-thumb { background: var(--sky); border-radius: 99px; }
-.strip-item {
+.strip-slot {
+  position: relative;
   flex: 0 0 clamp(220px, 62vw, 260px);
   scroll-snap-align: center;
 }
+.strip-item { width: 100%; }
 .strip-arrow {
   position: absolute;
   top: 50%;
@@ -1207,3 +1209,139 @@ body.modal-open { overflow: hidden; }
 .app.opening .intro .cloud,
 .app.opening .intro .cloud-svg,
 .app.opening .intro .tulip-svg { animation-play-state: paused; }
+
+
+/* ---------- Red string theory: pins + threads between the photos ---------- */
+.pin {
+  position: absolute;
+  z-index: 3;
+  top: 4px;
+  left: 50%;
+  width: 14px;
+  height: 14px;
+  margin-left: -7px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #ff9aa3 0%, #d4263a 52%, #8f1020 100%);
+  box-shadow: 0 3px 5px rgba(60, 0, 10, 0.4);
+  pointer-events: none;
+}
+.string {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  left: 50%;
+  width: calc(100% + 28px); /* photo width + the gap to the next photo */
+  height: 40px;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 3px 2px rgba(60, 0, 10, 0.28));
+}
+.string path { fill: none; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.string-base { stroke: #d4263a; stroke-width: 2.6; }
+.string-shine { stroke: #ff7f8c; stroke-width: 0.9; stroke-dasharray: 5 4; opacity: 0.8; }
+
+
+/* =====================================================================
+   Polish layer: soft pink accents + gentle depth. Remove this whole
+   block to go back to the plain blue look.
+   ===================================================================== */
+:root {
+  --pink: #ff8fb7;
+  --pink-soft: #ffd9e8;
+  --pink-deep: #e5557f;
+}
+::selection { background: var(--pink-soft); color: var(--navy); }
+html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+/* page background: a whisper of pink glow next to the blue */
+body {
+  background:
+    radial-gradient(800px 480px at 6% 16%, rgba(255, 217, 232, 0.5), transparent 70%),
+    radial-gradient(900px 520px at 96% 46%, rgba(255, 217, 232, 0.4), transparent 70%),
+    radial-gradient(1200px 600px at 50% -10%, var(--mist), transparent 70%),
+    var(--paper);
+}
+
+/* section titles get a small blue-to-pink flourish */
+main h3::after {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 3px;
+  margin: 14px auto 0;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--sky), var(--pink));
+}
+
+/* hero: sparkles + a soft rosy glow */
+.hero-bg {
+  background-image:
+    linear-gradient(180deg, rgba(15, 42, 92, 0.34) 0%, rgba(78, 52, 128, 0.52) 100%),
+    var(--hero-img);
+}
+.kicker::before,
+.kicker::after {
+  content: "\2726";
+  display: inline-block;
+  margin: 0 0.55em;
+  font-size: 0.6em;
+  vertical-align: 0.2em;
+  color: #ffc4dc;
+}
+.hero h2 { text-shadow: 0 4px 40px rgba(8, 22, 58, 0.45), 0 0 70px rgba(255, 160, 200, 0.3); }
+
+/* intro + countdown card */
+.intro::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(700px 320px at 50% 88%, rgba(255, 170, 205, 0.28), transparent 70%);
+  pointer-events: none;
+}
+.intro-card {
+  background: linear-gradient(165deg, #ffffff 0%, #e8f0ff 52%, #ffe1ed 130%);
+  box-shadow: 0 30px 70px rgba(8, 22, 58, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+}
+
+/* buttons */
+.btn {
+  background: linear-gradient(135deg, #4a86f0, #2f6fe4 60%, #2a62cf);
+  box-shadow: 0 8px 20px rgba(47, 111, 228, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+.btn.ghost { background: transparent; box-shadow: none; }
+
+/* polaroids: softer, layered shadows */
+.frame {
+  border-radius: 10px;
+  box-shadow:
+    0 1px 2px rgba(15, 42, 92, 0.06),
+    0 12px 28px rgba(15, 42, 92, 0.12),
+    0 30px 50px rgba(47, 111, 228, 0.08);
+}
+.memories.wide {
+  background: linear-gradient(180deg, transparent 0%, rgba(255, 226, 238, 0.5) 20%, rgba(232, 241, 255, 0.6) 62%, transparent 100%);
+}
+
+/* letters: pink wax seal + pink ribbon */
+.env-seal {
+  background: radial-gradient(circle at 35% 30%, #ff9fbf 0%, #e5557f 58%, #b83a63 100%);
+  box-shadow: 0 4px 10px rgba(120, 20, 55, 0.35);
+}
+.tie-band { background: linear-gradient(90deg, #d6527f, #ff9fbf 50%, #d6527f); }
+.bow-loop { fill: #ff8fb7; stroke: #d6527f; }
+.bow-tail { fill: #f777a4; stroke: #d6527f; }
+.bow-knot { fill: #e5557f; stroke: #b83a63; }
+
+/* small touches */
+.progress { background: linear-gradient(90deg, var(--sky), var(--pink)); }
+.music { transition: color 0.25s ease; }
+.music:hover { color: var(--pink-deep); }
+
+/* stickers: the bear and the stars are pink now */
+.sticker.is-lotso {
+  filter: grayscale(1) sepia(1) hue-rotate(300deg) saturate(2.6) brightness(1.12) drop-shadow(0 6px 10px rgba(15, 42, 92, 0.18));
+}
+.sticker.is-patrick {
+  filter: hue-rotate(292deg) saturate(1.2) brightness(1.08) drop-shadow(0 6px 10px rgba(15, 42, 92, 0.18));
+}

@@ -10,15 +10,23 @@ import {
 } from "motion/react";
 import "./App.css";
 import mainPic from "./assets/MainPic.jpg";
+import bulalo from "./assets/bulalo.jpg";
+import burolyarn from "./assets/burolyarn.jpg";
 import cling2 from "./assets/cling2.jpg";
 import clingy from "./assets/clingy.jpg";
 import conference from "./assets/conference.jpg";
+import crushmokono from "./assets/crushmokono.jpg";
+import gamitjacketko from "./assets/gamitjacketko.jpg";
 import herasakid from "./assets/herasakid.jpg";
 import lucban from "./assets/lucban.jpg";
+import lucbanfampic from "./assets/lucbanfampic.jpg";
+import lucbanjog from "./assets/lucbanjog.jpg";
 import mcdo from "./assets/mcdo.jpg";
 import myfavenastolen from "./assets/myfavenastolen.jpg";
 import shoes from "./assets/shoes.jpg";
 import shore from "./assets/shore.jpg";
+import shore2 from "./assets/shore2.jpg";
+import tagaytayfampic from "./assets/tagaytayfampic.jpg";
 import withbabyalie from "./assets/withbabyalie.jpg";
 
 /* ------------------------------------------------------------------
@@ -26,6 +34,10 @@ import withbabyalie from "./assets/withbabyalie.jpg";
    - Photos: put images in /public and set src, e.g. "/photo1.jpg"
    - Music: put the mp3 files in src/music (see the "music engine" below)
 ------------------------------------------------------------------- */
+// Placeholder story shown in each photo's note. Replace per photo, e.g.
+// story: ["First paragraph.", "Second paragraph."]
+const TODO_STORY = ["Write what happened in this photo here: where you were, what you did, what made it special."];
+
 const CONFIG = {
   name: "Ashley Nicole",
   nickname: "Leyley",
@@ -49,38 +61,36 @@ const CONFIG = {
     { label: "Hug from me :)", done: false },
   ],
   ask: {
-    link: "Can I ask you something?",
-    question: "Are you happy today?",
-    glad: "I'm glad to hear it",
-    no: "That's okay. You don't have to be. I'm here, and I hope this made your day a little brighter.",
+    link: "I have a questionn",
+    question: "Masaya u today?",
+    glad: "YAYYY ^^",
+    no: "Aww, I don't know what happened pero do know I'm here okay?.",
     wish: "My birthday wish for you is to always be happy, whatever it is, whomever you are with, whatever you're doing, I hope you'll be happy. That's all I'll ever ask for you.",
-    hugAsk: "You didn't receive a hug?",
-    hugYes: "I did, thanks",
-    hugNo: "No, we didn't see each other",
-    hugMsg: "I'll hug you when I see you. Just know I miss you a lot.",
+    hugAsk: "'Di kita nahug today?",
+    hugYes: "Nahug",
+    hugNo: "No, Di tayo nagkita",
+    hugMsg: "Hug kita when I see you okay? miss naman kita palagi, let's have a date after our work",
     final: "Happy Birthday, My love. I'll always be here, loving you. :)",
   },
   memories: [
-    { caption: "Clingy me", src: clingy, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "Still clingy", src: cling2, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "The conference", src: conference, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "Her, as a kid", src: herasakid, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "Lucban", src: lucban, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "Mcdo date", src: mcdo, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "My fave, stolen", src: myfavenastolen, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "New shoes", src: shoes, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "At the shore", src: shore, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "With baby Alie", src: withbabyalie, date: "", story: ["Write what happened in this photo here: where you were, what you did, what made it special."] },
-    { caption: "Memory 11", src: "", date: "", story: [] },
-    { caption: "Memory 12", src: "", date: "", story: [] },
-    { caption: "Memory 13", src: "", date: "", story: [] },
-    { caption: "Memory 14", src: "", date: "", story: [] },
-    { caption: "Memory 15", src: "", date: "", story: [] },
-    { caption: "Memory 16", src: "", date: "", story: [] },
-    { caption: "Memory 17", src: "", date: "", story: [] },
-    { caption: "Memory 18", src: "", date: "", story: [] },
-    { caption: "Memory 19", src: "", date: "", story: [] },
-    { caption: "Memory 20", src: "", date: "", story: [] },
+    { caption: "Clingy yarn", src: clingy, date: "", story: "Punta tayo neto festi, backseat tayo tas miss mo ako" },
+    { caption: "Still clingy", src: cling2, date: "", story: "Pauwi from school tas busy ka magtiktok kaya ginugulo kita" },
+    { caption: "SMX", src: conference, date: "", story: "May natutunan ka ba dito, inasar ko lang kayo e" },
+    { caption: "Her, as a kid", src: herasakid, date: "", story: "My fave kiddo pic, you look so cutie here" },
+    { caption: "Lucban", src: lucban, date: "", story: "My first family related gathering with you all, very very memorable for me, sarap pa ng sleep mo" },
+    { caption: "Mcdo date", src: mcdo, date: "", story: "Otw Home from festi tapos di mo alam sinend na sakin ni khat" },
+    { caption: "Fave kong pic sayo na pang WP", src: myfavenastolen, date: "", story: "lucban pic, stolen yarn pero hahaha this pic will hold a special place in my heart" },
+    { caption: "Unexpected New shoes", src: shoes, date: "", story: "Galala ni dadi binilhan ako sapatos bigla amp" },
+    { caption: "Shore Pasay", src: shore, date: "", story: "Shore date na hindi ako kasama sa overnight, HAYSSS" },
+    { caption: "With baby Alie", src: withbabyalie, date: "", story: "my 2 babies" },
+    { caption: "Crush mo ko no?", src: crushmokono, date: "", story: "Tagaytay bond, miss na miss kita nito nya ha ha" },
+    { caption: "Gamit jacket ko", src: gamitjacketko, date: "", story: "huli ka balbon, crush moko e" },
+    { caption: "Bulalo date", src: bulalo, date: "", story: "Unexpected bulalo YUMMMM" },
+    { caption: "Burol yarn", src: burolyarn, date: "", story: "Pumustura ba naman sa burol" },
+    { caption: "Lucban jog", src: lucbanjog, date: "", story: "I SO SO MISS THIS, your smile here is so pure kahit andaming nangyari" },
+    { caption: "Lucban fam pic", src: lucbanfampic, date: "", story: "manliligaw ang alam ng buong angkan HAHAHAHHA" },
+    { caption: "Shore, again", src: shore2, date: "", story: "pogi ko kasi sa polo ni dadi kaya crush mo ako" },
+    { caption: "Tagaytay fam pic", src: tagaytayfampic, date: "", story: "one of the best nights i have ever had." },
   ],
   memoriesEnd: "To more memories with you, Love",
   // 5 letters, each opens from its own envelope
@@ -112,6 +122,14 @@ const CONFIG = {
       label: "lexa",
       title: "To my forever,",
       body: ["Write your fifth letter here.", "Another paragraph, if you'd like."],
+    },
+    {
+      label: "matt",
+      title: "Happy Birthday, Boss!",
+      body: [
+        "Wishing you all the best. Dami alam kasi ni juls eh bibili pa raw siya domain para sau tas gagawan niya rin documentation HAHAHAAHHA eme anyways stay pretty and slay boss pibirthday!!",
+      ],
+      from: "matt",
     },
   ],
 };
@@ -245,7 +263,7 @@ function Sticker({ type, top, left, rot, i }) {
   const [failed, setFailed] = useState(false);
   const { src, fallback } = STICKERS[type];
   const common = {
-    className: "sticker",
+    className: `sticker is-${type}`,
     style: {
       top: `${top}%`,
       left: `${left}%`,
@@ -342,7 +360,7 @@ function Cake() {
           transition={{ duration: 0.3, ease: EASE }}
         >
           {lit
-            ? "Close your eyes, make a wish, then blow out the candles."
+            ? "I'm pretty sure nabilhan na kita bday cake, but do think that this is a manifestation cake for your wish."
             : `Hope your wish comes true, ${CONFIG.nickname}.`}
         </motion.p>
       </AnimatePresence>
@@ -842,6 +860,16 @@ function AskFlow({ onClose, hugged }) {
 
 /* ---------------------------- memories strip ---------------------------- */
 
+// a red thread from this photo's pin to the next one ("red string theory")
+function RedString() {
+  return (
+    <svg className="string" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
+      <path className="string-base" d="M0 1 Q50 56 100 1" />
+      <path className="string-shine" d="M0 1 Q50 56 100 1" />
+    </svg>
+  );
+}
+
 function Memories({ onOpen }) {
   const trackRef = useRef(null);
   const nudge = (dir) => {
@@ -854,7 +882,7 @@ function Memories({ onOpen }) {
     <section className="memories wide">
       <Reveal as="h3">Our memories</Reveal>
       <Reveal as="p" className="strip-hint" y={30} start={1} end={0.8}>
-        Swipe or use the arrows &rarr;
+       Swipe it, and click the pictures on by one para makita mo nilalaman ng puso ko yie &rarr;
       </Reveal>
 
       <div className="strip-wrap">
@@ -864,32 +892,38 @@ function Memories({ onOpen }) {
 
         <div className="strip" ref={trackRef} tabIndex={0} aria-label="Memories, scroll sideways">
           {CONFIG.memories.map((m, i) => (
-            <motion.div
-              key={m.caption}
-              className={`frame strip-item ${m.src ? "clickable" : ""}`}
-              style={{ rotate: i % 2 ? 1.2 : -1.2 }}
-              onClick={() => m.src && onOpen(m)}
-              role={m.src ? "button" : undefined}
-              tabIndex={m.src ? 0 : undefined}
-              aria-label={m.src ? `Remember: ${m.caption}` : undefined}
-              onKeyDown={(e) => m.src && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen(m))}
-              whileHover={{
-                rotate: 0,
-                y: -6,
-                scale: 1.02,
-                transition: { type: "spring", stiffness: 300, damping: 20 },
-              }}
-            >
-              {m.src ? <img src={m.src} alt={m.caption} loading="lazy" decoding="async" /> : <div className="ph">Add photo</div>}
-              <span>{m.caption}</span>
-            </motion.div>
+            <div className="strip-slot" key={m.caption}>
+              <RedString />
+              <span className="pin" aria-hidden="true" />
+              <motion.div
+                className={`frame strip-item ${m.src ? "clickable" : ""}`}
+                style={{ rotate: i % 2 ? 1.2 : -1.2 }}
+                onClick={() => m.src && onOpen(m)}
+                role={m.src ? "button" : undefined}
+                tabIndex={m.src ? 0 : undefined}
+                aria-label={m.src ? `Remember: ${m.caption}` : undefined}
+                onKeyDown={(e) => m.src && (e.key === "Enter" || e.key === " ") && (e.preventDefault(), onOpen(m))}
+                whileHover={{
+                  rotate: 0,
+                  y: -6,
+                  scale: 1.02,
+                  transition: { type: "spring", stiffness: 300, damping: 20 },
+                }}
+              >
+                {m.src ? <img src={m.src} alt={m.caption} loading="lazy" decoding="async" /> : <div className="ph">Add photo</div>}
+                <span>{m.caption}</span>
+              </motion.div>
+            </div>
           ))}
 
-          <div className="frame strip-item end-frame" style={{ rotate: CONFIG.memories.length % 2 ? 1.2 : -1.2 }}>
-            <div className="end-body">
-              <p>{CONFIG.memoriesEnd}</p>
+          <div className="strip-slot">
+            <span className="pin" aria-hidden="true" />
+            <div className="frame strip-item end-frame" style={{ rotate: CONFIG.memories.length % 2 ? 1.2 : -1.2 }}>
+              <div className="end-body">
+                <p>{CONFIG.memoriesEnd}</p>
+              </div>
+              <span>&hearts;</span>
             </div>
-            <span>&hearts;</span>
           </div>
         </div>
 
@@ -1022,7 +1056,7 @@ function LetterModal({ letter, onClose }) {
                 viewport={{ root: scrollRef, once: true, amount: 0.1 }}
                 transition={{ duration: 0.6, ease: EASE }}
               >
-                &mdash; {CONFIG.from}
+                &mdash; {letter.from || CONFIG.from}
               </motion.p>
             </article>
             <div className={`paper-fade top ${edges.top ? "on" : ""}`} aria-hidden="true" />
@@ -1064,7 +1098,7 @@ function Letters() {
     <section className="letters">
       <Reveal as="h3">Letters for you</Reveal>
       <Reveal as="p" className="letters-sub" y={30} start={1} end={0.8}>
-        A little stack, just for you. Tap the top one to open it.
+        hehe kinonchaba ko sila for these, i'm sure you'll love them. Click mo para maopen.
       </Reveal>
 
       <Reveal y={70} start={1} end={0.72}>
@@ -1308,8 +1342,8 @@ function Gate({ left, onBypass }) {
           transition={{ duration: 0.6, ease: EASE }}
         >
           <div className="step">
-            <h1 className="big">{ready ? `It’s time, ${CONFIG.nickname}!` : `BAWALLL PAA BLEE`}</h1>
-            <p className="gate-sub">{ready ? "Your surprise is ready." : "Sa Dec 1 pa  bye."}</p>
+            <h1 className="big">{ready ? `It’s time, ${CONFIG.nickname}!` : `BLE BAWAL PAAA`}</h1>
+            <p className="gate-sub">{ready ? "Your surprise is ready." : "sa dec 1 pa to bibigay sayo, bye"}</p>
 
             <div className="count" role="timer" aria-live="off">
               {Object.entries(parts).map(([label, value]) => (
