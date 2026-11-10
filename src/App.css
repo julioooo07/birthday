@@ -1345,3 +1345,33 @@ main h3::after {
 .sticker.is-patrick {
   filter: hue-rotate(292deg) saturate(1.2) brightness(1.08) drop-shadow(0 6px 10px rgba(15, 42, 92, 0.18));
 }
+
+
+/* ---------- Scroll stays open after she has read it ---------- */
+.tied-btn .paper.mini {
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  overflow: hidden;
+  padding: 16px 16px 16px 54px;
+  line-height: 28px;
+  background-image:
+    linear-gradient(90deg, transparent 38px, rgba(255, 140, 160, 0.45) 38px 40px, transparent 40px),
+    repeating-linear-gradient(to bottom, transparent 0 27px, #d8e5fb 27px 28px);
+}
+.tied-btn .paper.mini h2 { font-size: 1.5rem; line-height: 28px; margin-bottom: 28px; }
+.tied-btn .paper.mini p { font-size: 1.05rem; line-height: 28px; margin-bottom: 0; }
+.tied-btn .tpaper .paper-fade { right: 0; height: 64px; }
+.loose-bow {
+  position: absolute;
+  z-index: 5;
+  right: -6%;
+  bottom: -34px;
+  width: 74px;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 4px 6px rgba(15, 42, 92, 0.3));
+}
+
+/* keeps the spot where the cake button was, so the page does not jump once it is gone */
+.cake-action { min-height: 56px; display: flex; justify-content: center; }

@@ -29,15 +29,6 @@ import shore2 from "./assets/shore2.jpg";
 import tagaytayfampic from "./assets/tagaytayfampic.jpg";
 import withbabyalie from "./assets/withbabyalie.jpg";
 
-/* ------------------------------------------------------------------
-   EDIT YOUR CONTENT HERE
-   - Photos: put images in /public and set src, e.g. "/photo1.jpg"
-   - Music: put the mp3 files in src/music (see the "music engine" below)
-------------------------------------------------------------------- */
-// Placeholder story shown in each photo's note. Replace per photo, e.g.
-// story: ["First paragraph.", "Second paragraph."]
-const TODO_STORY = ["Write what happened in this photo here: where you were, what you did, what made it special."];
-
 const CONFIG = {
   name: "Ashley Nicole",
   nickname: "Leyley",
@@ -338,12 +329,11 @@ function Cake() {
   const [pieces, setPieces] = useState([]);
   const candles = [96, 120, 144];
 
-  const toggle = () => {
-    if (lit) {
-      setPieces(makePieces());
-      setBurst((b) => b + 1);
-    }
-    setLit((v) => !v);
+  // one way only: once the candles are blown out they stay out
+  const blowOut = () => {
+    setPieces(makePieces());
+    setBurst((b) => b + 1);
+    setLit(false);
   };
 
   return (
@@ -390,7 +380,19 @@ function Cake() {
         {burst > 0 && <Confetti key={burst} pieces={pieces} />}
       </div>
 
-      <Btn onClick={toggle}>{lit ? "Blow out the candles" : "Light them again"}</Btn>
+      <div className="cake-action">
+        <AnimatePresence>
+          {lit && (
+            <motion.div
+              key="blow"
+              exit={{ opacity: 0, y: 10, scale: 0.9 }}
+              transition={{ duration: 0.3, ease: EASE }}
+            >
+              <Btn onClick={blowOut}>Blow out the candles</Btn>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </Reveal>
   );
 }
@@ -422,25 +424,61 @@ const VOLUME = 0.6;
 const FADE_MS = 1600;
 
 const music = (() => {
-  const audios = {};
-  const listeners = new Set();
-  const state = { track: "intro", enabled: true, playing: false };
-  let snapshot = { ...state };
-  let started = false;
-  let unlockOff = null;
-  let switchId = 0;
+  // clean up any engine left behind by older code during a hot reload
+  const legacy = globalThis.__bdayMusic;
+  if (legacy) {
+    Object.values(legacy.audios || {}).forEach((a) => {
+      try {
+        a.pause();
+        a.removeAttribute("src");
+        a.load();
+      } catch {
+        /* ignore */
+      }
+    });
+    delete globalThis.__bdayMusic;
+  }
+
+  // One shared engine kept on `window`, so a hot reload can never create a second one.
+  const G = (globalThis.__bdayMusic2 ??= {
+    audios: {},
+    listeners: new Set(),
+    started: false,
+    unlockOff: null,
+    switchId: 0,
+    fading: false,
+    state: { track: "intro", muted: false, playing: false, locked: false },
+  });
+  const { audios, listeners, state } = G;
+  const view = () => ({ playing: state.playing && !state.muted });
+  G.snapshot = view();
 
   const emit = () => {
-    snapshot = { ...state };
+    G.snapshot = view();
     listeners.forEach((l) => l());
   };
   const audioFor = (name) => {
+    // once the main page is open, Little Things does not exist any more
+    if (name === "intro" && state.locked) return null;
     if (!TRACKS[name]) return null;
     if (!audios[name]) {
       const a = new Audio(TRACKS[name]);
       a.loop = true;
       a.preload = "auto";
       a.volume = 0;
+      a.muted = state.muted;
+      a.addEventListener("playing", () => {
+        if (name === state.track && !state.playing) {
+          state.playing = true;
+          emit();
+        }
+      });
+      a.addEventListener("pause", () => {
+        if (name === state.track && state.playing && !G.fading) {
+          state.playing = false;
+          emit();
+        }
+      });
       audios[name] = a;
     }
     return audios[name];
@@ -459,13 +497,28 @@ const music = (() => {
       }
     }, 50);
   };
+  // remove Little Things completely (stop it, drop its file, forget it)
+  const destroyIntro = () => {
+    const a = audios.intro;
+    if (!a) return;
+    clearInterval(a._fade);
+    try {
+      a.pause();
+      a.removeAttribute("src");
+      a.load();
+    } catch {
+      /* ignore */
+    }
+    delete audios.intro;
+  };
   // start the current track (fading in); resolves false if the browser blocks it
   const playCurrent = () => {
+    if (state.locked) state.track = "main";
     const name = state.track;
     const a = audioFor(name);
-    if (!a || !state.enabled) return Promise.resolve(false);
-    // another song is still fading out: wait, switchTo starts this one once it has stopped
-    if (Object.entries(audios).some(([n, x]) => n !== name && !x.paused)) return Promise.resolve(true);
+    if (!a) return Promise.resolve(false);
+    if (G.fading) return Promise.resolve(true); // the old song is still fading out
+    a.muted = state.muted; // a muted track still plays, silently, so unmuting is instant
     if (!a.paused) {
       fade(a, VOLUME, FADE_MS);
       return Promise.resolve(true);
@@ -474,8 +527,7 @@ const music = (() => {
     return a
       .play()
       .then(() => {
-        if (state.track !== name || !state.enabled) {
-          // the track changed (or music was paused) while the browser was starting this one
+        if (state.track !== name) {
           a.pause();
           return false;
         }
@@ -487,16 +539,16 @@ const music = (() => {
       .catch(() => false);
   };
   const armUnlock = () => {
-    if (unlockOff) return;
+    if (G.unlockOff) return;
     const events = ["pointerdown", "keydown", "touchstart"];
     const onFirst = (e) => {
       if (e.target?.closest?.(".music")) return; // the music button handles itself
-      playCurrent().then((ok) => ok && unlockOff?.());
+      playCurrent().then((ok) => ok && G.unlockOff?.());
     };
     events.forEach((ev) => window.addEventListener(ev, onFirst));
-    unlockOff = () => {
+    G.unlockOff = () => {
       events.forEach((ev) => window.removeEventListener(ev, onFirst));
-      unlockOff = null;
+      G.unlockOff = null;
     };
   };
 
@@ -505,11 +557,11 @@ const music = (() => {
       listeners.add(l);
       return () => listeners.delete(l);
     },
-    getSnapshot: () => snapshot,
+    getSnapshot: () => G.snapshot,
     hasAudio: () => Boolean(TRACKS.intro || TRACKS.main),
     init() {
-      if (started) return;
-      started = true;
+      if (G.started) return;
+      G.started = true;
       audioFor("intro");
       audioFor("main"); // starts buffering now, so the switch later is instant
       playCurrent().then((ok) => !ok && armUnlock());
@@ -518,45 +570,45 @@ const music = (() => {
     ensure() {
       playCurrent().then((ok) => !ok && armUnlock());
     },
-    // one song at a time: fade the old one out, pause it, then start the new one
+    // main page opens: Little Things fades out and is gone for good, I Like Me Better takes over
     switchTo(name) {
-      if (state.track === name) return;
-      const prev = audioFor(state.track);
-      state.track = name;
-      const id = ++switchId;
-      const startNext = () => {
-        if (id !== switchId) return; // a newer switch took over
-        const next = audioFor(name);
+      if (name !== "main") return;
+      if (state.locked) return;
+      state.locked = true;
+      state.track = "main";
+      const id = ++G.switchId;
+      const startMain = () => {
+        G.fading = false;
+        destroyIntro();
+        if (id !== G.switchId) return;
+        const next = audioFor("main");
         if (!next) {
           state.playing = false;
           emit();
           return;
         }
         next.currentTime = 0;
-        if (state.enabled) playCurrent().then((ok) => !ok && armUnlock());
+        playCurrent().then((ok) => !ok && armUnlock());
       };
-      if (prev && !prev.paused) {
-        fade(prev, 0, 900, () => {
-          prev.pause();
-          startNext();
-        });
+      const intro = audios.intro;
+      if (intro && !intro.paused) {
+        G.fading = true;
+        fade(intro, 0, 900, startMain);
       } else {
-        startNext();
+        startMain();
       }
       emit();
     },
+    // the button: mute / unmute whatever song belongs to the page she is on
     toggle() {
-      const a = audioFor(state.track);
-      if (!a) return;
-      if (state.playing) {
-        state.enabled = false;
-        state.playing = false;
-        emit();
-        fade(a, 0, 400, () => a.pause());
-      } else {
-        state.enabled = true;
-        playCurrent();
-      }
+      const name = state.locked ? "main" : state.track;
+      if (!audioFor(name)) return;
+      state.muted = !state.muted;
+      Object.values(audios).forEach((a) => {
+        a.muted = state.muted;
+      });
+      emit();
+      if (!state.muted) playCurrent(); // in case the browser had not let it start yet
     },
   };
 })();
@@ -882,7 +934,7 @@ function Memories({ onOpen }) {
     <section className="memories wide">
       <Reveal as="h3">Our memories</Reveal>
       <Reveal as="p" className="strip-hint" y={30} start={1} end={0.8}>
-       Swipe it, and click the pictures on by one para makita mo nilalaman ng puso ko yie &rarr;
+        Swipe it, and click the pictures on by one para makita mo nilalaman ng puso ko yie &rarr;
       </Reveal>
 
       <div className="strip-wrap">
@@ -1155,7 +1207,7 @@ function Letters() {
 
 /* ---------------------------- tied scroll letter ---------------------------- */
 
-function TiedScroll({ stage, bodyH = 0, children }) {
+function TiedScroll({ stage, bodyH = 0, loose = false, children }) {
   const unrolled = stage === "unroll" || stage === "read";
   return (
     <div className="tscroll">
@@ -1192,12 +1244,29 @@ function TiedScroll({ stage, bodyH = 0, children }) {
           <circle className="bow-knot" cx="50" cy="36" r="7.5" />
         </svg>
       </motion.div>
+
+      {loose && (
+        <motion.svg
+          className="loose-bow"
+          viewBox="0 0 100 70"
+          aria-hidden="true"
+          initial={{ opacity: 0, scale: 0.6, rotate: -70 }}
+          animate={{ opacity: 1, scale: 1, rotate: -22 }}
+          transition={{ delay: 1.1, duration: 0.7, ease: EASE }}
+        >
+          <path className="bow-tail" d="M47 38 C42 50 36 60 29 68 L43 66 L51 44 Z" />
+          <path className="bow-tail" d="M53 38 C58 50 64 60 71 68 L57 66 L49 44 Z" />
+          <path className="bow-loop" d="M50 35 C30 5 6 10 10 32 C13 52 36 46 50 35 Z" />
+          <path className="bow-loop" d="M50 35 C70 5 94 10 90 32 C87 52 64 46 50 35 Z" />
+          <circle className="bow-knot" cx="50" cy="36" r="7.5" />
+        </motion.svg>
+      )}
     </div>
   );
 }
 
-function TiedLetterModal({ onClose }) {
-  const [stage, setStage] = useState("tied"); // tied -> untie -> unroll -> read
+function TiedLetterModal({ onClose, onRead, skipIntro = false }) {
+  const [stage, setStage] = useState(skipIntro ? "read" : "tied"); // tied -> untie -> unroll -> read
   const scrollRef = useRef(null);
   const [edges, setEdges] = useState({ top: false, bottom: false });
   const bodyH = useMemo(() => Math.round(Math.min(window.innerHeight * 0.66, 620)), []);
@@ -1213,12 +1282,18 @@ function TiedLetterModal({ onClose }) {
 
   useEffect(() => {
     document.body.classList.add("modal-open");
-    const t1 = setTimeout(() => setStage("untie"), 700);
-    const t2 = setTimeout(() => setStage("unroll"), 1900);
-    const t3 = setTimeout(() => {
-      setStage("read");
-      updateEdges();
-    }, 3300);
+    let t1, t2, t3;
+    if (skipIntro) {
+      updateEdges(); // already read once: the scroll opens straight away
+    } else {
+      t1 = setTimeout(() => setStage("untie"), 700);
+      t2 = setTimeout(() => setStage("unroll"), 1900);
+      t3 = setTimeout(() => {
+        setStage("read");
+        onRead?.();
+        updateEdges();
+      }, 3300);
+    }
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => {
@@ -1228,7 +1303,7 @@ function TiedLetterModal({ onClose }) {
       clearTimeout(t3);
       window.removeEventListener("keydown", onKey);
     };
-  }, [onClose, updateEdges]);
+  }, [onClose, onRead, skipIntro, updateEdges]);
 
   const reveal = {
     initial: { opacity: 0, y: 18 },
@@ -1279,20 +1354,42 @@ function TiedLetterModal({ onClose }) {
 
 function TiedLetter() {
   const [open, setOpen] = useState(false);
-  const close = useCallback(() => setOpen(false), []);
+  const [hasRead, setHasRead] = useState(false);
+  const didRead = useRef(false);
+  const onRead = useCallback(() => {
+    didRead.current = true;
+  }, []);
+  const close = useCallback(() => {
+    setOpen(false);
+    if (didRead.current) setHasRead(true); // the scroll now unrolls on the page and stays open
+  }, []);
+
   return (
     <>
-      <motion.button
-        className="tied-btn"
-        whileHover={{ y: -6, rotate: -1 }}
-        whileTap={{ scale: 0.97 }}
-        transition={SPRING}
-        onClick={() => setOpen(true)}
-        aria-label="Untie the ribbon and read my letter"
-      >
-        <TiedScroll stage="tied" />
-      </motion.button>
-      <AnimatePresence>{open && <TiedLetterModal key="tied" onClose={close} />}</AnimatePresence>
+      <Reveal as="p" className="letter-sub" y={30} start={1} end={0.8}>
+        {hasRead ? "Tap the scroll to read it again." : "I wrote you something. Untie the ribbon to read it."}
+      </Reveal>
+      <Reveal y={60} start={1} end={0.75}>
+        <motion.button
+          className="tied-btn"
+          whileHover={{ y: -6, rotate: -1 }}
+          whileTap={{ scale: 0.97 }}
+          transition={SPRING}
+          onClick={() => setOpen(true)}
+          aria-label={hasRead ? "Read my letter again" : "Untie the ribbon and read my letter"}
+        >
+          <TiedScroll stage={hasRead ? "read" : "tied"} bodyH={190} loose={hasRead}>
+            <article className="paper mini" aria-hidden="true">
+              <h2>Hey Love!</h2>
+              <p>{CONFIG.letter[0]}</p>
+            </article>
+            <div className="paper-fade bottom on" aria-hidden="true" />
+          </TiedScroll>
+        </motion.button>
+      </Reveal>
+      <AnimatePresence>
+        {open && <TiedLetterModal key="tied" onClose={close} onRead={onRead} skipIntro={hasRead} />}
+      </AnimatePresence>
     </>
   );
 }
@@ -1646,12 +1743,7 @@ function Birthday() {
 
             <section className="letter">
               <Reveal as="h3">Hey Love!</Reveal>
-              <Reveal as="p" className="letter-sub" y={30} start={1} end={0.8}>
-                I wrote you something. Untie the ribbon to read it.
-              </Reveal>
-              <Reveal y={60} start={1} end={0.75}>
-                <TiedLetterM />
-              </Reveal>
+              <TiedLetterM />
             </section>
 
             <CakeM />
