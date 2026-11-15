@@ -1,0 +1,241 @@
+/* =====================================================================
+   Time-of-day sky, night city, fireworks. Imported after App.css.
+   ===================================================================== */
+
+/* ---------- Fireworks (countdown screen at 0) ---------- */
+.fireworks {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ---------- Sunset ---------- */
+.sunset-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s linear;
+  background: linear-gradient(180deg, #2a2c6b 0%, #7d4a86 30%, #ff8a4c 66%, #ffc77a 100%);
+}
+.sun-glow {
+  position: absolute;
+  left: 50%;
+  top: 82%;
+  width: 62vmax;
+  height: 62vmax;
+  margin: -31vmax 0 0 -31vmax;
+  background: radial-gradient(
+    circle,
+    rgba(255, 244, 200, 0.95) 0 5%,
+    rgba(255, 205, 120, 0.6) 12%,
+    rgba(255, 150, 80, 0.25) 30%,
+    transparent 62%
+  );
+  animation: sun-pulse 7s ease-in-out infinite alternate;
+}
+.rays {
+  position: absolute;
+  left: 50%;
+  top: 85%;
+  width: 170vmax;
+  height: 170vmax;
+  margin: -85vmax 0 0 -85vmax;
+  background: repeating-conic-gradient(
+    from 0deg at 50% 50%,
+    rgba(255, 205, 130, 0.34) 0 5deg,
+    transparent 5deg 13deg
+  );
+  -webkit-mask-image: radial-gradient(circle at 50% 50%, #000 0%, rgba(0, 0, 0, 0.6) 35%, transparent 70%);
+  mask-image: radial-gradient(circle at 50% 50%, #000 0%, rgba(0, 0, 0, 0.6) 35%, transparent 70%);
+  will-change: transform;
+  animation: rays-spin 150s linear infinite;
+}
+@keyframes rays-spin { to { transform: rotate(360deg); } }
+@keyframes sun-pulse { from { transform: scale(0.96); } to { transform: scale(1.05); } }
+
+/* on the main page the sunset is a soft warm wash over the light page */
+.sunset-layer.page {
+  background: linear-gradient(180deg, rgba(255, 226, 190, 0) 0%, rgba(255, 184, 120, 0.32) 55%, rgba(255, 140, 90, 0.5) 100%);
+}
+.sunset-layer.page .rays { opacity: 0.55; }
+.sunset-layer.page .sun-glow { opacity: 0.7; }
+
+.cloud-svg { transition: fill 4s ease; }
+.clouds.warm .cloud-svg { fill: #ffd9b5; }
+
+/* fixed sky behind the whole main page */
+.page-sky {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/* ---------- Night city ---------- */
+.night-scene {
+  --road: clamp(76px, 12vh, 112px);
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s linear;
+  background: linear-gradient(180deg, #02030a 0%, #060a1c 50%, #0d1535 100%);
+}
+
+.star {
+  position: absolute;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0.2;
+  animation: twinkle 3s ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { opacity: 0.15; } to { opacity: 0.95; } }
+
+.moon {
+  position: absolute;
+  top: 9%;
+  right: 12%;
+  width: clamp(48px, 7vw, 76px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 34% 36%, rgba(200, 205, 225, 0.55) 0 9%, transparent 10%),
+    radial-gradient(circle at 66% 62%, rgba(200, 205, 225, 0.45) 0 12%, transparent 13%),
+    radial-gradient(circle at 40% 28%, #fffdf0, #e9ecff 70%);
+  box-shadow: 0 0 40px 10px rgba(220, 230, 255, 0.35), 0 0 120px 40px rgba(150, 170, 255, 0.18);
+}
+
+.skyline {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  bottom: calc(var(--road) - 4px);
+}
+.skyline.far { height: 58vh; }
+.skyline.near { height: 44vh; }
+.win.blink { animation: win-blink 4s steps(1) infinite; }
+@keyframes win-blink { 0%, 55% { opacity: 1; } 56%, 70% { opacity: 0.1; } 71%, 100% { opacity: 1; } }
+.roof-light { fill: #ff4b5c; animation: roof-blink 1.8s ease-in-out infinite; }
+@keyframes roof-blink { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+
+.road {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--road);
+  z-index: 2;
+  background: linear-gradient(180deg, #151a2e 0%, #080a14 100%);
+  border-top: 3px solid #232a48;
+}
+.road::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 56%;
+  height: 4px;
+  background: repeating-linear-gradient(90deg, rgba(255, 217, 138, 0.75) 0 36px, transparent 36px 72px);
+}
+
+.lamp {
+  position: absolute;
+  z-index: 2;
+  bottom: calc(var(--road) - 8px);
+  width: 4px;
+  height: clamp(70px, 14vh, 120px);
+  margin-left: -2px;
+  background: linear-gradient(90deg, #1a2038, #3a4468);
+}
+.lamp::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -6px;
+  width: 14px;
+  height: 8px;
+  margin-left: -7px;
+  border-radius: 6px 6px 2px 2px;
+  background: #ffe9b8;
+  box-shadow: 0 0 22px 10px rgba(255, 217, 138, 0.55);
+}
+.lamp::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 2px;
+  width: 120px;
+  height: 100%;
+  margin-left: -60px;
+  background: radial-gradient(ellipse at 50% 0%, rgba(255, 217, 138, 0.2), transparent 70%);
+}
+
+.car {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  bottom: calc(var(--road) * 0.1);
+  width: clamp(104px, 14vw, 160px);
+  animation: drive 15s linear infinite;
+  will-change: transform;
+}
+.car svg { display: block; width: 100%; height: auto; overflow: visible; }
+.car-body { animation: car-bump 0.35s ease-in-out infinite alternate; }
+.wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: wheel-spin 0.45s linear infinite;
+}
+@keyframes drive {
+  from { transform: translateX(-30vw); }
+  to { transform: translateX(112vw); }
+}
+@keyframes car-bump { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
+@keyframes wheel-spin { to { transform: rotate(360deg); } }
+
+/* ---------- Main page at night: text that sits on the dark sky ---------- */
+body.is-night { background: #04060f; }
+body.is-night main h3,
+body.is-night .cake-note,
+body.is-night .check-row,
+body.is-night .check-label { color: #e8f1ff; }
+body.is-night .strip-hint,
+body.is-night .letters-sub,
+body.is-night .letter-sub,
+body.is-night .ask-link { color: #9cc4ff; }
+body.is-night .ask-link:hover { color: #fff; }
+body.is-night .pile-chip { border-color: rgba(156, 196, 255, 0.5); color: #9cc4ff; }
+body.is-night .pile-chip:hover { background: rgba(156, 196, 255, 0.12); }
+body.is-night .pile-chip.on { background: var(--blue); border-color: var(--blue); color: #fff; }
+body.is-night .checklist li { border-bottom-color: rgba(156, 196, 255, 0.25); }
+body.is-night .memories.wide {
+  background: linear-gradient(180deg, transparent 0%, rgba(40, 52, 110, 0.35) 25%, rgba(24, 34, 80, 0.4) 70%, transparent 100%);
+}
+
+/* ---------- Testing badge ---------- */
+.sky-badge {
+  position: fixed;
+  z-index: 600;
+  left: 14px;
+  bottom: 14px;
+  max-width: 70vw;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--navy);
+  font: 700 0.8rem var(--sans);
+  box-shadow: 0 6px 16px rgba(8, 22, 58, 0.25);
+}
+
+@media (max-width: 600px) {
+  .moon { right: 8%; }
+  .skyline.far { height: 50vh; }
+  .skyline.near { height: 38vh; }
+}

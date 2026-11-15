@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { memo, useCallback, useContext, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
   AnimatePresence,
   MotionConfig,
@@ -9,6 +9,9 @@ import {
   useTransform,
 } from "motion/react";
 import "./App.css";
+import "./Sky.css";
+import { Fireworks, NightScene, SkyProvider, SunsetLayer } from "./Sky.jsx";
+import { SkyModeContext } from "./skyContext.jsx";
 import mainPic from "./assets/MainPic.jpg";
 import bulalo from "./assets/bulalo.jpg";
 import burolyarn from "./assets/burolyarn.jpg";
@@ -33,10 +36,10 @@ const CONFIG = {
   name: "Ashley Nicole",
   nickname: "Leyley",
   from: "Hulyo",
-  // Site opens at this moment (12:00 AM, Dec 1 2026, Philippine time)
   unlockAt: "2026-12-01T00:00:00+08:00",
-  // Type this on the countdown screen to reveal the bypass button (set to "" to disable)
   bypassCode: "leyley",
+  previewCode: "zero",
+  skyCode: "theme",
   letter: [
     "Happy Happy Birthday My love!!! You’ve gone through so much with me, and without me, your whole life is such a beautiful thing to explore alam mo ba ‘yon?",
     "Knowing you for just how long made me realize already about what kind of person you are, and now that I’m courting you, I wanna know more and I want to build a genuine connection with you that exceeds the bounderies of our friendship.",
@@ -84,15 +87,18 @@ const CONFIG = {
     { caption: "Tagaytay fam pic", src: tagaytayfampic, date: "", story: "one of the best nights i have ever had." },
   ],
   memoriesEnd: "To more memories with you, Love",
-  // 5 letters, each opens from its own envelope
   letters: [
     {
       label: "Mariah",
-      title: "My dearest Leyley,",
+      title: "Hi Nene!",
       body: [
-        "Write your first letter here. Tell her what you were feeling when you wrote this.",
-        "Add as many paragraphs as you want.",
+        "I want to greet you the happiest birthday! We are so grateful na kasama kami sa pag-celebrate ng birthday mo, not just as your friends but as your sisters. Thank you for always being so generous (to the point na pati family mo kasama na rin HAHAHA) and for always being there beside me and Alliah, especially during the times when we need you the most.",
+        "You are the type of person I know who is full of love and has so much love to give. I hope you never lose that part of yourself because it's one of the many things that make you so special. I hope you also know that you deserve the same amount of love, care, and kindness that you constantly give to the people around you. Here's to celebrating you, your day, and your existence!",
+        "My wish for you is to stay funny, outgoing, and unapologetically yourself. May life be kinder to you, may you always have peace of mind, good health, and countless reasons to smile. I hope you get to experience all the beautiful things life has to offer and that all the things you've been silently wishing and praying for will eventually find their way to you. I also hope that no matter where life takes us, we'll always find our way back to each other.",
+        "More birthdays, spontaneous gala, endless kwentuhan, food trips, and memories to make together! Never think that you have to go through anything alone because you have us. Always kami nandito for you, just hit us up anytime.",
+        "We love you so much, Nene! Enjoy your day because you deserve nothing but the best! XOXO",
       ],
+      from: "Aia",
     },
     {
       label: "Alliah",
@@ -163,9 +169,6 @@ const heroChild = {
   show: { opacity: 1, y: 0, filter: "blur(0px)", transition: { duration: 1, ease: EASE } },
 };
 
-/* ---------------------------- small pieces ---------------------------- */
-
-// Fades and slides in gradually, tied to how far she has scrolled
 function Reveal({ as = "div", y = 80, start = 1, end = 0.5, className, children }) {
   const ref = useRef(null);
   const { scrollYProgress } = useScroll({ target: ref, offset: [`0 ${start}`, `0 ${end}`] });
@@ -181,8 +184,6 @@ function Reveal({ as = "div", y = 80, start = 1, end = 0.5, className, children 
   );
 }
 
-/* ---------------------------- drifting clouds ---------------------------- */
-
 const CLOUDS = [
   { top: 6, w: 260, dur: 52, phase: 0.1, op: 0.28, blur: 0 },
   { top: 18, w: 180, dur: 70, phase: 0.55, op: 0.18, blur: 1.5 },
@@ -193,9 +194,9 @@ const CLOUDS = [
   { top: 24, w: 220, dur: 44, phase: 0.4, op: 0.2, blur: 0.5 },
 ];
 
-function Clouds() {
+function Clouds({ warm = false }) {
   return (
-    <div className="clouds" aria-hidden="true">
+    <div className={`clouds ${warm ? "warm" : ""}`} aria-hidden="true">
       {CLOUDS.map((c, i) => (
         <div
           key={i}
@@ -284,7 +285,6 @@ function Btn({ children, ghost, ...props }) {
   );
 }
 
-// Random values are created in a click handler (not during render)
 function makePieces() {
   return Array.from({ length: 44 }, () => {
     const angle = -Math.PI / 2 + (Math.random() - 0.5) * Math.PI * 1.3;
@@ -329,7 +329,6 @@ function Cake() {
   const [pieces, setPieces] = useState([]);
   const candles = [96, 120, 144];
 
-  // one way only: once the candles are blown out they stay out
   const blowOut = () => {
     setPieces(makePieces());
     setBurst((b) => b + 1);
@@ -397,12 +396,6 @@ function Cake() {
   );
 }
 
-/* ---------------------------- music engine ----------------------------
-   Little Things plays as soon as the browser allows it (browsers block sound
-   until the first click / key press), then crossfades into I Like Me Better
-   when the birthday page opens. Files are found by name in src/music.
-------------------------------------------------------------------------- */
-
 const musicFiles = import.meta.glob("./music/*.{mp3,m4a,wav,ogg}", {
   eager: true,
   query: "?url",
@@ -411,42 +404,44 @@ const musicFiles = import.meta.glob("./music/*.{mp3,m4a,wav,ogg}", {
 const findTrack = (re) => Object.entries(musicFiles).find(([path]) => re.test(path))?.[1] || "";
 const TRACKS = {
   intro: findTrack(/little things/i),
+  time: findTrack(/mariah/i),
   main: findTrack(/like me better/i),
 };
-if (import.meta.env.DEV && !(TRACKS.intro && TRACKS.main)) {
+if (import.meta.env.DEV && !(TRACKS.intro && TRACKS.time && TRACKS.main)) {
   console.warn(
-    "[music] Could not find both songs in src/music. Found:",
+    "[music] Could not find all three songs in src/music. Found:",
     Object.keys(musicFiles),
-    "- move the 'music' folder into birthday/src/"
+    "- the file names need to contain: 'little things', 'mariah' and 'like me better'"
   );
 }
 const VOLUME = 0.6;
 const FADE_MS = 1600;
 
 const music = (() => {
-  // clean up any engine left behind by older code during a hot reload
-  const legacy = globalThis.__bdayMusic;
-  if (legacy) {
-    Object.values(legacy.audios || {}).forEach((a) => {
+  for (const key of ["__bdayMusic", "__bdayMusic2"]) {
+    const old = globalThis[key];
+    if (!old) continue;
+    Object.values(old.audios || {}).forEach((a) => {
       try {
         a.pause();
         a.removeAttribute("src");
         a.load();
       } catch {
-        /* ignore */
+        return;
       }
     });
-    delete globalThis.__bdayMusic;
+    old.unlockOff?.();
+    delete globalThis[key];
   }
 
-  // One shared engine kept on `window`, so a hot reload can never create a second one.
-  const G = (globalThis.__bdayMusic2 ??= {
+  const G = (globalThis.__bdayMusic3 ??= {
     audios: {},
     listeners: new Set(),
     started: false,
     unlockOff: null,
     switchId: 0,
     fading: false,
+    timeDone: false,
     state: { track: "intro", muted: false, playing: false, locked: false },
   });
   const { audios, listeners, state } = G;
@@ -458,12 +453,11 @@ const music = (() => {
     listeners.forEach((l) => l());
   };
   const audioFor = (name) => {
-    // once the main page is open, Little Things does not exist any more
-    if (name === "intro" && state.locked) return null;
+    if ((name === "intro" || name === "time") && state.locked) return null;
     if (!TRACKS[name]) return null;
     if (!audios[name]) {
       const a = new Audio(TRACKS[name]);
-      a.loop = true;
+      a.loop = name !== "time";
       a.preload = "auto";
       a.volume = 0;
       a.muted = state.muted;
@@ -475,6 +469,14 @@ const music = (() => {
       });
       a.addEventListener("pause", () => {
         if (name === state.track && state.playing && !G.fading) {
+          state.playing = false;
+          emit();
+        }
+      });
+      a.addEventListener("ended", () => {
+        if (name !== "time") return;
+        G.timeDone = true;
+        if (state.track === "time" && state.playing) {
           state.playing = false;
           emit();
         }
@@ -497,9 +499,8 @@ const music = (() => {
       }
     }, 50);
   };
-  // remove Little Things completely (stop it, drop its file, forget it)
-  const destroyIntro = () => {
-    const a = audios.intro;
+  const destroy = (name) => {
+    const a = audios[name];
     if (!a) return;
     clearInterval(a._fade);
     try {
@@ -507,18 +508,18 @@ const music = (() => {
       a.removeAttribute("src");
       a.load();
     } catch {
-      /* ignore */
+      return;
     }
-    delete audios.intro;
+    delete audios[name];
   };
-  // start the current track (fading in); resolves false if the browser blocks it
   const playCurrent = () => {
     if (state.locked) state.track = "main";
     const name = state.track;
+    if (name === "time" && G.timeDone) return Promise.resolve(true);
     const a = audioFor(name);
     if (!a) return Promise.resolve(false);
-    if (G.fading) return Promise.resolve(true); // the old song is still fading out
-    a.muted = state.muted; // a muted track still plays, silently, so unmuting is instant
+    if (G.fading) return Promise.resolve(true);
+    a.muted = state.muted;
     if (!a.paused) {
       fade(a, VOLUME, FADE_MS);
       return Promise.resolve(true);
@@ -542,7 +543,7 @@ const music = (() => {
     if (G.unlockOff) return;
     const events = ["pointerdown", "keydown", "touchstart"];
     const onFirst = (e) => {
-      if (e.target?.closest?.(".music")) return; // the music button handles itself
+      if (e.target?.closest?.(".music")) return;
       playCurrent().then((ok) => ok && G.unlockOff?.());
     };
     events.forEach((ev) => window.addEventListener(ev, onFirst));
@@ -558,28 +559,53 @@ const music = (() => {
       return () => listeners.delete(l);
     },
     getSnapshot: () => G.snapshot,
-    hasAudio: () => Boolean(TRACKS.intro || TRACKS.main),
-    init() {
+    hasAudio: () => Boolean(TRACKS.intro || TRACKS.time || TRACKS.main),
+    init(initial) {
       if (G.started) return;
       G.started = true;
-      audioFor("intro");
-      audioFor("main"); // starts buffering now, so the switch later is instant
+      state.track = initial === "time" && TRACKS.time ? "time" : "intro";
+      audioFor(state.track);
+      audioFor("main");
       playCurrent().then((ok) => !ok && armUnlock());
     },
-    // make sure the current track is playing; if the browser blocks it, start on the next click/key
     ensure() {
       playCurrent().then((ok) => !ok && armUnlock());
     },
-    // main page opens: Little Things fades out and is gone for good, I Like Me Better takes over
     switchTo(name) {
-      if (name !== "main") return;
       if (state.locked) return;
+
+      if (name === "time") {
+        if (!TRACKS.time || state.track === "time" || G.timeDone) return;
+        state.track = "time";
+        const id = ++G.switchId;
+        const startTime = () => {
+          G.fading = false;
+          destroy("intro");
+          if (id !== G.switchId) return;
+          const next = audioFor("time");
+          if (!next) return;
+          next.currentTime = 0;
+          playCurrent().then((ok) => !ok && armUnlock());
+        };
+        const intro = audios.intro;
+        if (intro && !intro.paused) {
+          G.fading = true;
+          fade(intro, 0, 900, startTime);
+        } else {
+          startTime();
+        }
+        emit();
+        return;
+      }
+
+      if (name !== "main") return;
       state.locked = true;
       state.track = "main";
       const id = ++G.switchId;
       const startMain = () => {
         G.fading = false;
-        destroyIntro();
+        destroy("intro");
+        destroy("time");
         if (id !== G.switchId) return;
         const next = audioFor("main");
         if (!next) {
@@ -590,16 +616,21 @@ const music = (() => {
         next.currentTime = 0;
         playCurrent().then((ok) => !ok && armUnlock());
       };
-      const intro = audios.intro;
-      if (intro && !intro.paused) {
+      const playingNow = [audios.intro, audios.time].filter((a) => a && !a.paused);
+      if (playingNow.length) {
         G.fading = true;
-        fade(intro, 0, 900, startMain);
+        let left = playingNow.length;
+        playingNow.forEach((a) =>
+          fade(a, 0, 900, () => {
+            left -= 1;
+            if (left === 0) startMain();
+          })
+        );
       } else {
         startMain();
       }
       emit();
     },
-    // the button: mute / unmute whatever song belongs to the page she is on
     toggle() {
       const name = state.locked ? "main" : state.track;
       if (!audioFor(name)) return;
@@ -608,7 +639,7 @@ const music = (() => {
         a.muted = state.muted;
       });
       emit();
-      if (!state.muted) playCurrent(); // in case the browser had not let it start yet
+      if (!state.muted) playCurrent();
     },
   };
 })();
@@ -908,11 +939,6 @@ function AskFlow({ onClose, hugged }) {
   );
 }
 
-/* ------------------------------- app ------------------------------- */
-
-/* ---------------------------- memories strip ---------------------------- */
-
-// a red thread from this photo's pin to the next one ("red string theory")
 function RedString() {
   return (
     <svg className="string" viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true">
@@ -987,8 +1013,6 @@ function Memories({ onOpen }) {
   );
 }
 
-/* ---------------------------- envelope letters ---------------------------- */
-
 function Envelope({ open, name }) {
   return (
     <div className="env">
@@ -1023,7 +1047,7 @@ function Envelope({ open, name }) {
 }
 
 function LetterModal({ letter, onClose }) {
-  const [stage, setStage] = useState("closed"); // closed -> opening -> paper
+  const [stage, setStage] = useState("closed");
   const scrollRef = useRef(null);
   const [edges, setEdges] = useState({ top: false, bottom: false });
 
@@ -1127,7 +1151,6 @@ function LetterModal({ letter, onClose }) {
 const RESTS = [-3, 4, -5, 2, -4];
 
 function Letters() {
-  // order[last] is the letter on top of the pile
   const [order, setOrder] = useState(() => CONFIG.letters.map((_, i) => i).reverse());
   const [active, setActive] = useState(null);
   const activeRef = useRef(null);
@@ -1138,7 +1161,7 @@ function Letters() {
   };
   const close = useCallback(() => {
     const cur = activeRef.current;
-    if (cur !== null) setOrder((o) => [cur, ...o.filter((x) => x !== cur)]); // opened letter goes to the back
+    if (cur !== null) setOrder((o) => [cur, ...o.filter((x) => x !== cur)]);
     activeRef.current = null;
     setActive(null);
   }, []);
@@ -1156,7 +1179,7 @@ function Letters() {
       <Reveal y={70} start={1} end={0.72}>
         <div className="pile">
           {CONFIG.letters.map((l, i) => {
-            const d = order.length - 1 - order.indexOf(i); // 0 = top
+            const d = order.length - 1 - order.indexOf(i);
             const isTop = d === 0;
             return (
               <motion.button
@@ -1204,8 +1227,6 @@ function Letters() {
     </section>
   );
 }
-
-/* ---------------------------- tied scroll letter ---------------------------- */
 
 function TiedScroll({ stage, bodyH = 0, loose = false, children }) {
   const unrolled = stage === "unroll" || stage === "read";
@@ -1266,7 +1287,7 @@ function TiedScroll({ stage, bodyH = 0, loose = false, children }) {
 }
 
 function TiedLetterModal({ onClose, onRead, skipIntro = false }) {
-  const [stage, setStage] = useState(skipIntro ? "read" : "tied"); // tied -> untie -> unroll -> read
+  const [stage, setStage] = useState(skipIntro ? "read" : "tied");
   const scrollRef = useRef(null);
   const [edges, setEdges] = useState({ top: false, bottom: false });
   const bodyH = useMemo(() => Math.round(Math.min(window.innerHeight * 0.66, 620)), []);
@@ -1284,7 +1305,7 @@ function TiedLetterModal({ onClose, onRead, skipIntro = false }) {
     document.body.classList.add("modal-open");
     let t1, t2, t3;
     if (skipIntro) {
-      updateEdges(); // already read once: the scroll opens straight away
+      updateEdges();
     } else {
       t1 = setTimeout(() => setStage("untie"), 700);
       t2 = setTimeout(() => setStage("unroll"), 1900);
@@ -1361,7 +1382,7 @@ function TiedLetter() {
   }, []);
   const close = useCallback(() => {
     setOpen(false);
-    if (didRead.current) setHasRead(true); // the scroll now unrolls on the page and stays open
+    if (didRead.current) setHasRead(true);
   }, []);
 
   return (
@@ -1394,9 +1415,41 @@ function TiedLetter() {
   );
 }
 
-/* ---------------------------- countdown gate ---------------------------- */
+const CloudsM = memo(Clouds);
+const TulipsM = memo(Tulips);
+
+function Backdrop() {
+  const mode = useContext(SkyModeContext);
+  return (
+    <>
+      <SunsetLayer />
+      <NightScene />
+      {mode !== "night" && (
+        <>
+          <CloudsM warm={mode === "sunset"} />
+          <TulipsM mode="on-dark" />
+        </>
+      )}
+    </>
+  );
+}
+
+function PageSky() {
+  return (
+    <div className="page-sky" aria-hidden="true">
+      <SunsetLayer page />
+      <NightScene />
+    </div>
+  );
+}
+
+function SiteGround() {
+  const mode = useContext(SkyModeContext);
+  return mode === "night" ? null : <TulipsM mode="on-light" />;
+}
 
 const UNLOCK_AT = new Date(CONFIG.unlockAt).getTime();
+const READY_AT_LOAD = Date.now() >= UNLOCK_AT;
 
 function timeParts(ms) {
   const t = Math.max(0, Math.floor(ms / 1000));
@@ -1410,18 +1463,32 @@ function timeParts(ms) {
 
 function Gate({ left, onBypass }) {
   const [revealed, setRevealed] = useState(false);
+  const [preview, setPreview] = useState(false);
   const typed = useRef("");
-  const parts = timeParts(left);
-  const ready = left <= 0;
+  const fired = useRef(false);
+  const shownLeft = preview ? 0 : left;
+  const parts = timeParts(shownLeft);
+  const ready = shownLeft <= 0;
 
-  // Typing the secret code anywhere on the page makes the bypass button appear
   useEffect(() => {
-    const secret = (CONFIG.bypassCode || "").toLowerCase();
-    if (!secret) return;
+    if (!ready || fired.current) return;
+    fired.current = true;
+    music.switchTo("time");
+  }, [ready]);
+
+  useEffect(() => {
+    const bypass = (CONFIG.bypassCode || "").toLowerCase();
+    const peek = (CONFIG.previewCode || "").toLowerCase();
+    const keep = Math.max(bypass.length, peek.length);
+    if (!keep) return;
     const onKey = (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
-      typed.current = (typed.current + e.key.toLowerCase()).slice(-secret.length);
-      if (typed.current === secret) setRevealed(true);
+      typed.current = (typed.current + e.key.toLowerCase()).slice(-keep);
+      if (bypass && typed.current.endsWith(bypass)) setRevealed(true);
+      if (peek && typed.current.endsWith(peek)) {
+        setPreview((p) => !p);
+        typed.current = "";
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -1430,8 +1497,13 @@ function Gate({ left, onBypass }) {
   return (
     <MotionConfig reducedMotion="never">
       <div className="intro gate">
-        <Clouds />
-        <Tulips mode="on-dark" />
+        {preview && (
+          <div className="preview-badge" role="status">
+            Test preview: timer at 0. Type "{CONFIG.previewCode}" again to go back.
+          </div>
+        )}
+        <Backdrop />
+        {ready && <Fireworks />}
         <motion.div
           className="intro-card gate-card"
           initial={{ opacity: 0, y: 30, scale: 0.96 }}
@@ -1439,8 +1511,8 @@ function Gate({ left, onBypass }) {
           transition={{ duration: 0.6, ease: EASE }}
         >
           <div className="step">
-            <h1 className="big">{ready ? `It’s time, ${CONFIG.nickname}!` : `BLE BAWAL PAAA`}</h1>
-            <p className="gate-sub">{ready ? "Your surprise is ready." : "sa dec 1 pa to bibigay sayo, bye"}</p>
+            <h1 className="big">{ready ? `YAYYYYYYY` : `BLE BAWAL PAAA`}</h1>
+            <p className="gate-sub">{ready ? "ITS TIMEEEEEEE" : "sa dec 1 pa to bibigay sayo, bye"}</p>
 
             <div className="count" role="timer" aria-live="off">
               {Object.entries(parts).map(([label, value]) => (
@@ -1469,7 +1541,7 @@ function Gate({ left, onBypass }) {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     transition={{ type: "spring", stiffness: 260, damping: 18 }}
                   >
-                    <Btn onClick={onBypass}>{ready ? "Open it" : "Hey Hulyo"}</Btn>
+                    <Btn onClick={onBypass}>{ready ? "I'm Ready!!" : "Hey Hulyo"}</Btn>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -1480,8 +1552,6 @@ function Gate({ left, onBypass }) {
     </MotionConfig>
   );
 }
-
-/* ---------------------------- memory viewer (polaroid + story) ---------------------------- */
 
 function MemoryViewer({ memory, onClose }) {
   useEffect(() => {
@@ -1550,7 +1620,6 @@ const TiedLetterM = memo(TiedLetter);
 const StickerM = memo(Sticker);
 
 function Birthday() {
-  // 0-3 = intro cards, 4 = site expanding from the button, 5 = site
   const [step, setStep] = useState(0);
   const [noPos, setNoPos] = useState({ x: 0, y: 0 });
   const [origin, setOrigin] = useState({ x: 0, y: 0, r: 0 });
@@ -1561,13 +1630,10 @@ function Birthday() {
   const hugged = hugIndex < 0 || checked[hugIndex];
   const closeAsk = useCallback(() => setAskOpen(false), []);
 
-  // "Are you Ashley Nicole?" opens -> Little Things plays
   useEffect(() => {
     music.ensure();
   }, []);
 
-  // Build the (heavy) page in the background while she reads the intro cards,
-  // so nothing has to be created during the opening animation.
   const [siteReady, setSiteReady] = useState(false);
   useEffect(() => {
     const go = () => setSiteReady(true);
@@ -1577,7 +1643,6 @@ function Birthday() {
     return () => (window.cancelIdleCallback ? window.cancelIdleCallback(id) : clearTimeout(id));
   }, []);
   useEffect(() => {
-    // download + decode the big photos ahead of time, one at a time
     const urls = [mainPic, ...CONFIG.memories.map((m) => m.src).filter(Boolean)];
     const timers = urls.map((u, i) =>
       setTimeout(() => {
@@ -1675,11 +1740,9 @@ function Birthday() {
   return (
     <MotionConfig reducedMotion="never">
       <div className={`app ${step === 4 ? "opening" : ""}`}>
-        {/* INTRO */}
         {step < 5 && (
         <div className="intro">
-          <Clouds />
-          <Tulips mode="on-dark" />
+          <Backdrop />
           <motion.div
             className="intro-card"
             initial={{ opacity: 0, y: 30, scale: 0.96 }}
@@ -1702,7 +1765,6 @@ function Birthday() {
         </div>
         )}
 
-        {/* SITE */}
         <motion.div
           className="site"
           initial={false}
@@ -1712,6 +1774,8 @@ function Birthday() {
         >
           {(siteReady || step >= 4) && (
             <>
+          <PageSky />
+
           <motion.div
             className="hero-bg"
             aria-hidden="true"
@@ -1721,7 +1785,7 @@ function Birthday() {
             transition={{ duration: 2.2, ease: EASE }}
           />
 
-          {step >= 4 && <Tulips mode="on-light" />}
+          {step >= 4 && <SiteGround />}
 
           <div className="sticker-layer" aria-hidden="true">
             {PLACEMENTS.map((p, i) => (
@@ -1773,10 +1837,8 @@ function Birthday() {
 
         {step === 5 && <motion.div className="progress" style={{ scaleX: progress }} />}
 
-        {/* ASK FLOW */}
         <AnimatePresence>{askOpen && <AskFlow key="ask" onClose={closeAsk} hugged={hugged} />}</AnimatePresence>
 
-        {/* LIGHTBOX */}
         <AnimatePresence>
           {lightbox && <MemoryViewer key="memory" memory={lightbox} onClose={closeLightbox} />}
         </AnimatePresence>
@@ -1786,11 +1848,12 @@ function Birthday() {
 }
 
 export default function App() {
-  // Unlock lives only in memory: every reload / restart starts on the countdown again.
   const [unlocked, setUnlocked] = useState(false);
   const [now, setNow] = useState(() => Date.now());
 
-  useEffect(() => music.init(), []);
+  useEffect(() => {
+    music.init(READY_AT_LOAD ? "time" : "intro");
+  }, []);
 
   useEffect(() => {
     if (unlocked) return;
@@ -1799,12 +1862,12 @@ export default function App() {
   }, [unlocked]);
 
   return (
-    <>
+    <SkyProvider code={CONFIG.skyCode}>
       {unlocked ? <Birthday /> : <Gate left={UNLOCK_AT - now} onBypass={() => {
-          music.ensure(); // runs inside the click, so the browser allows sound
+          music.ensure();
           setUnlocked(true);
         }} />}
       <MusicButton />
-    </>
+    </SkyProvider>
   );
 }

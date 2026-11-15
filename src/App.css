@@ -1375,3 +1375,20 @@ main h3::after {
 
 /* keeps the spot where the cake button was, so the page does not jump once it is gone */
 .cake-action { min-height: 56px; display: flex; justify-content: center; }
+
+/* testing badge on the countdown screen */
+.preview-badge {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 92vw;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--navy);
+  font: 700 0.8rem var(--sans);
+  text-align: center;
+  box-shadow: 0 6px 16px rgba(8, 22, 58, 0.25);
+}
