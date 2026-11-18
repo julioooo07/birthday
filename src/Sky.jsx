@@ -1,72 +1,81 @@
 import { memo, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { SkyModeContext, SkyLevelContext, skyAt } from "./skyContext";
 
-const FADE_S = 6;
-const PREVIEW_MINS = { day: 9 * 60, sunset: 17 * 60, night: 22 * 60 };
-const CYCLE = [null, "day", "sunset", "night"];
+const PREVIEW_MINS = { morning: 9 * 60, afternoon: 15 * 60, sunset: 18 * 60, night: 22 * 60 };
+const CYCLE = [null, "morning", "afternoon", "sunset", "night"];
 const minutesNow = () => {
   const d = new Date();
   return d.getHours() * 60 + d.getMinutes();
 };
 
-export function SkyProvider({ code = "", children }) {
+export function SkyProvider({ codes = {}, children }) {
   const [override, setOverride] = useState(null);
   const [mins, setMins] = useState(minutesNow);
+  const [armed, setArmed] = useState(false);
   const target = useMemo(() => skyAt(override ? PREVIEW_MINS[override] : mins), [override, mins]);
-  const [shown, setShown] = useState({ sunset: 0, night: 0 });
-  const shownRef = useRef(shown);
 
+  // re-check the clock every 20 seconds so the sky keeps shifting while the page stays open
   useEffect(() => {
     const id = setInterval(() => setMins(minutesNow()), 20000);
     return () => clearInterval(id);
   }, []);
 
+  // the sky starts as plain day for one frame, then eases to the real one.
+  // The easing itself is a CSS transition (runs on the GPU, no React re-renders).
   useEffect(() => {
-    const tSun = target.sunset;
-    const tNight = target.night;
-    const size = 0.1 / FADE_S;
-    const move = (v, t) => (Math.abs(t - v) <= size ? t : v + Math.sign(t - v) * size);
-    const id = setInterval(() => {
-      const cur = shownRef.current;
-      const next = { sunset: move(cur.sunset, tSun), night: move(cur.night, tNight) };
-      if (next.sunset === cur.sunset && next.night === cur.night) {
-        clearInterval(id);
-        return;
-      }
-      shownRef.current = next;
-      setShown(next);
-    }, 100);
-    return () => clearInterval(id);
-  }, [target.sunset, target.night]);
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(() => setArmed(true));
+    });
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+    };
+  }, []);
+
+  const level = useMemo(
+    () => (armed ? { sunset: target.sunset, night: target.night } : { sunset: 0, night: 0 }),
+    [armed, target.sunset, target.night]
+  );
 
   useEffect(() => {
     document.body.classList.toggle("is-night", target.mode === "night");
     document.body.classList.toggle("is-sunset", target.mode === "sunset");
   }, [target.mode]);
 
+  // testing only: type a word anywhere to preview that time of day
   useEffect(() => {
-    const word = (code || "").toLowerCase();
-    if (!word) return;
+    const words = Object.entries(codes)
+      .filter(([, w]) => w)
+      .map(([name, w]) => [name, String(w).toLowerCase()]);
+    if (!words.length) return undefined;
+    const keep = Math.max(...words.map(([, w]) => w.length));
     let typed = "";
     const onKey = (e) => {
       if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
-      typed = (typed + e.key.toLowerCase()).slice(-word.length);
-      if (typed === word) {
-        typed = "";
-        setOverride((o) => CYCLE[(CYCLE.indexOf(o) + 1) % CYCLE.length]);
-      }
+      typed = (typed + e.key.toLowerCase()).slice(-keep);
+      const hit = words.find(([, w]) => typed.endsWith(w));
+      if (!hit) return;
+      typed = "";
+      const name = hit[0];
+      if (name === "auto") setOverride(null);
+      else if (name === "cycle") setOverride((o) => CYCLE[(CYCLE.indexOf(o) + 1) % CYCLE.length]);
+      else if (PREVIEW_MINS[name] !== undefined) setOverride(name);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [code]);
+  }, [codes]);
 
   return (
     <SkyModeContext.Provider value={target.mode}>
-      <SkyLevelContext.Provider value={shown}>
+      <SkyLevelContext.Provider value={level}>
         {children}
         {override && (
           <div className="sky-badge" role="status">
-            Sky preview: {override}. Type "{code}" to change.
+            Sky preview: <strong>{override}</strong>. Type: {Object.entries(codes)
+              .filter(([name, w]) => w && name !== "cycle")
+              .map(([, w]) => w)
+              .join(", ")}
           </div>
         )}
       </SkyLevelContext.Provider>
@@ -74,11 +83,46 @@ export function SkyProvider({ code = "", children }) {
   );
 }
 
+// the day look (clouds, tulips) fades out as the night fades in, so nothing pops
+export function DayLayer({ page = false, children }) {
+  const { night } = useContext(SkyLevelContext);
+  const off = night > 0.99;
+  const parked = useParked(off);
+  return (
+    <div
+      className={`day-layer ${page ? "page" : ""} ${off ? "off" : ""} ${parked ? "parked" : ""}`}
+      style={{ opacity: 1 - night }}
+      aria-hidden="true"
+    >
+      {children}
+    </div>
+  );
+}
+
+// true only once a layer has been faded out for a while: then its animations can be paused
+function useParked(isOff, ms = 6300) {
+  const [parked, setParked] = useState(false);
+  useEffect(() => {
+    if (!isOff) return undefined;
+    const id = setTimeout(() => setParked(true), ms);
+    return () => {
+      clearTimeout(id);
+      setParked(false);
+    };
+  }, [isOff, ms]);
+  return isOff && parked;
+}
+
 export function SunsetLayer({ page = false }) {
   const { sunset } = useContext(SkyLevelContext);
-  if (sunset < 0.01) return null;
+  const off = sunset < 0.01;
+  const parked = useParked(off);
   return (
-    <div className={`sunset-layer ${page ? "page" : ""}`} style={{ opacity: sunset }} aria-hidden="true">
+    <div
+      className={`sunset-layer ${page ? "page" : ""} ${off ? "off" : ""} ${parked ? "parked" : ""}`}
+      style={{ opacity: sunset }}
+      aria-hidden="true"
+    >
       <div className="sun-glow" />
       <div className="rays" />
     </div>
@@ -237,9 +281,10 @@ const NightLayers = memo(function NightLayers() {
 
 export function NightScene() {
   const { night } = useContext(SkyLevelContext);
-  if (night < 0.01) return null;
+  const off = night < 0.01;
+  const parked = useParked(off);
   return (
-    <div className="night-scene" style={{ opacity: night }} aria-hidden="true">
+    <div className={`night-scene ${off ? "off" : ""} ${parked ? "parked" : ""}`} style={{ opacity: night }} aria-hidden="true">
       <NightLayers />
     </div>
   );
@@ -261,7 +306,6 @@ export function Fireworks() {
     let raf = 0;
     let last = performance.now();
     let wait = 0;
-    let frames = 0;
     const pick = () => FW_COLORS[Math.floor(Math.random() * FW_COLORS.length)];
 
     const resize = () => {
@@ -309,20 +353,16 @@ export function Fireworks() {
     const frame = (now) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
-      frames += 1;
 
-      if (frames % 60 === 0) {
-        ctx.globalCompositeOperation = "source-over";
-        ctx.clearRect(0, 0, w, h);
-      } else {
-        ctx.globalCompositeOperation = "destination-out";
-        ctx.fillStyle = "rgba(0, 0, 0, 0.22)";
-        ctx.fillRect(0, 0, w, h);
-      }
+      // wipe the canvas and redraw: every spark is drawn as a short streak along its
+      // velocity, which looks like a trail without ever leaving ghosts behind
+      ctx.globalCompositeOperation = "source-over";
+      ctx.clearRect(0, 0, w, h);
       ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
 
       wait -= dt;
-      if (wait <= 0 && sparks.length < 1500) {
+      if (wait <= 0 && sparks.length < 1100) {
         launch();
         wait = 0.35 + Math.random() * 0.7;
       }
@@ -332,11 +372,13 @@ export function Fireworks() {
         r.vy += GRAVITY * dt;
         r.x += r.vx * dt;
         r.y += r.vy * dt;
-        ctx.globalAlpha = 1;
-        ctx.fillStyle = "#fff3c4";
+        ctx.globalAlpha = 0.9;
+        ctx.strokeStyle = "#fff3c4";
+        ctx.lineWidth = 2.4;
         ctx.beginPath();
-        ctx.arc(r.x, r.y, 2.2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(r.x - r.vx * 0.06, r.y - r.vy * 0.06);
+        ctx.lineTo(r.x, r.y);
+        ctx.stroke();
         if (r.vy >= -25) {
           explode(r);
           rockets.splice(i, 1);
@@ -355,11 +397,14 @@ export function Fireworks() {
         s.vy = s.vy * drag + 150 * dt;
         s.x += s.vx * dt;
         s.y += s.vy * dt;
-        ctx.globalAlpha = Math.max(0, 1 - s.life / s.max);
-        ctx.fillStyle = s.color;
+        const k = 1 - s.life / s.max;
+        ctx.globalAlpha = Math.pow(k, 1.5);
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = s.size * 1.3;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.moveTo(s.x - s.vx * 0.07, s.y - s.vy * 0.07);
+        ctx.lineTo(s.x, s.y);
+        ctx.stroke();
       }
       ctx.globalAlpha = 1;
       raf = requestAnimationFrame(frame);

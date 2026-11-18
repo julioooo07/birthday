@@ -10,7 +10,9 @@ import {
 } from "motion/react";
 import "./App.css";
 import "./Sky.css";
-import { Fireworks, NightScene, SkyProvider, SunsetLayer } from "./Sky.jsx";
+import "./Smooth.css";
+import "./Letters.css";
+import { DayLayer, Fireworks, NightScene, SkyProvider, SunsetLayer } from "./Sky.jsx";
 import { SkyModeContext } from "./skyContext.jsx";
 import mainPic from "./assets/MainPic.jpg";
 import bulalo from "./assets/bulalo.jpg";
@@ -39,7 +41,17 @@ const CONFIG = {
   unlockAt: "2026-12-01T00:00:00+08:00",
   bypassCode: "leyley",
   previewCode: "zero",
-  skyCode: "theme",
+  // Testing only: type one of these words anywhere to preview that time of day.
+  // "auto" goes back to the real clock, "theme" cycles through all of them.
+  // Set to {} before you send her the link.
+  skyCodes: {
+    morning: "morning",
+    afternoon: "afternoon",
+    sunset: "sunset",
+    night: "night",
+    auto: "auto",
+    cycle: "theme",
+  },
   letter: [
     "Happy Happy Birthday My love!!! You’ve gone through so much with me, and without me, your whole life is such a beautiful thing to explore alam mo ba ‘yon?",
     "Knowing you for just how long made me realize already about what kind of person you are, and now that I’m courting you, I wanna know more and I want to build a genuine connection with you that exceeds the bounderies of our friendship.",
@@ -396,6 +408,17 @@ function Cake() {
   );
 }
 
+/* ---------------------------- music engine ----------------------------
+   Flow:
+     countdown        Little Things plays while she waits
+     timer hits 0     Mariah Carey plays ONCE (Little Things fades out). The music
+                      button is hidden on this screen.
+     "I'm Ready!!"    Mariah fades out while Little Things fades back in
+     page opens       Little Things fades out for good, I Like Me Better fades in
+   Browsers block sound until the first click / key press. If a song is blocked, it
+   starts on her very first touch of the page.
+------------------------------------------------------------------------- */
+
 const musicFiles = import.meta.glob("./music/*.{mp3,m4a,wav,ogg}", {
   eager: true,
   query: "?url",
@@ -415,10 +438,10 @@ if (import.meta.env.DEV && !(TRACKS.intro && TRACKS.time && TRACKS.main)) {
   );
 }
 const VOLUME = 0.6;
-const FADE_MS = 1600;
 
 const music = (() => {
-  for (const key of ["__bdayMusic", "__bdayMusic2"]) {
+  // clean up any engine left behind by older code during a hot reload
+  for (const key of ["__bdayMusic", "__bdayMusic2", "__bdayMusic3"]) {
     const old = globalThis[key];
     if (!old) continue;
     Object.values(old.audios || {}).forEach((a) => {
@@ -434,123 +457,130 @@ const music = (() => {
     delete globalThis[key];
   }
 
-  const G = (globalThis.__bdayMusic3 ??= {
+  // One shared engine kept on `window`, so a hot reload can never create a second one.
+  const G = (globalThis.__bdayMusic4 ??= {
     audios: {},
     listeners: new Set(),
     started: false,
     unlockOff: null,
-    switchId: 0,
-    fading: false,
-    timeDone: false,
-    state: { track: "intro", muted: false, playing: false, locked: false },
+    snapshot: { playing: false, hidden: false },
+    state: { track: "intro", muted: false, locked: false, timePlayed: false, hidden: false },
   });
   const { audios, listeners, state } = G;
-  const view = () => ({ playing: state.playing && !state.muted });
-  G.snapshot = view();
 
+  const activeName = () => (state.locked ? "main" : state.track);
+
+  // what the button shows: is sound really coming out right now?
+  const view = () => {
+    const a = audios[activeName()];
+    const audible = Boolean(a && !a.paused && !a.ended);
+    return { playing: audible && !state.muted, hidden: state.hidden };
+  };
   const emit = () => {
-    G.snapshot = view();
+    const next = view();
+    if (next.playing === G.snapshot.playing && next.hidden === G.snapshot.hidden) return;
+    G.snapshot = next;
     listeners.forEach((l) => l());
   };
+
   const audioFor = (name) => {
-    if ((name === "intro" || name === "time") && state.locked) return null;
+    if (state.locked && name !== "main") return null; // the countdown songs are gone for good
     if (!TRACKS[name]) return null;
     if (!audios[name]) {
       const a = new Audio(TRACKS[name]);
-      a.loop = name !== "time";
+      a.loop = name !== "time"; // Mariah Carey plays once
       a.preload = "auto";
       a.volume = 0;
       a.muted = state.muted;
-      a.addEventListener("playing", () => {
-        if (name === state.track && !state.playing) {
-          state.playing = true;
-          emit();
-        }
-      });
-      a.addEventListener("pause", () => {
-        if (name === state.track && state.playing && !G.fading) {
-          state.playing = false;
-          emit();
-        }
-      });
-      a.addEventListener("ended", () => {
-        if (name !== "time") return;
-        G.timeDone = true;
-        if (state.track === "time" && state.playing) {
-          state.playing = false;
-          emit();
-        }
-      });
+      ["play", "playing", "pause", "ended"].forEach((ev) => a.addEventListener(ev, emit));
       audios[name] = a;
     }
     return audios[name];
   };
-  const fade = (a, to, ms, done) => {
-    clearInterval(a._fade);
+
+  // smooth volume change (time based, so it also finishes in a background tab)
+  const ramp = (a, to, ms, done) => {
+    clearInterval(a._ramp);
     const from = a.volume;
-    const steps = Math.max(1, Math.round(ms / 50));
-    let i = 0;
-    a._fade = setInterval(() => {
-      i += 1;
-      a.volume = Math.min(1, Math.max(0, from + ((to - from) * i) / steps));
-      if (i >= steps) {
-        clearInterval(a._fade);
+    const t0 = performance.now();
+    a._ramp = setInterval(() => {
+      const k = Math.min(1, (performance.now() - t0) / ms);
+      const eased = k * k * (3 - 2 * k);
+      a.volume = Math.min(1, Math.max(0, from + (to - from) * eased));
+      if (k >= 1) {
+        clearInterval(a._ramp);
         done?.();
       }
-    }, 50);
+    }, 40);
+  };
+  const fadeOutAndPause = (a, ms, then) => {
+    if (!a || a.paused) {
+      then?.();
+      return;
+    }
+    ramp(a, 0, ms, () => {
+      a.pause();
+      then?.();
+    });
   };
   const destroy = (name) => {
     const a = audios[name];
     if (!a) return;
-    clearInterval(a._fade);
+    clearInterval(a._ramp);
     try {
       a.pause();
       a.removeAttribute("src");
       a.load();
     } catch {
-      return;
+      /* the browser refused, nothing else to do */
     }
     delete audios[name];
   };
-  const playCurrent = () => {
-    if (state.locked) state.track = "main";
-    const name = state.track;
-    if (name === "time" && G.timeDone) return Promise.resolve(true);
+
+  // start (or keep playing) a song with a fade-in; resolves false if the browser blocks it
+  const start = (name, { ms = 1400, restart = false } = {}) => {
     const a = audioFor(name);
     if (!a) return Promise.resolve(false);
-    if (G.fading) return Promise.resolve(true);
-    a.muted = state.muted;
+    if (name === "time" && a.ended) return Promise.resolve(true); // she already heard it once
+    a.muted = state.muted; // a muted song keeps playing silently, so unmuting is instant
     if (!a.paused) {
-      fade(a, VOLUME, FADE_MS);
+      ramp(a, VOLUME, ms);
       return Promise.resolve(true);
     }
+    if (restart) a.currentTime = 0;
     a.volume = 0;
     return a
       .play()
       .then(() => {
-        if (state.track !== name) {
+        if (activeName() !== name) {
           a.pause();
           return false;
         }
-        fade(a, VOLUME, FADE_MS);
-        state.playing = true;
+        ramp(a, VOLUME, ms);
         emit();
         return true;
       })
       .catch(() => false);
   };
+
   const armUnlock = () => {
     if (G.unlockOff) return;
     const events = ["pointerdown", "keydown", "touchstart"];
     const onFirst = (e) => {
-      if (e.target?.closest?.(".music")) return;
-      playCurrent().then((ok) => ok && G.unlockOff?.());
+      if (e.target?.closest?.(".music")) return; // the music button handles itself
+      start(activeName()).then((ok) => ok && G.unlockOff?.());
     };
     events.forEach((ev) => window.addEventListener(ev, onFirst));
     G.unlockOff = () => {
       events.forEach((ev) => window.removeEventListener(ev, onFirst));
       G.unlockOff = null;
     };
+  };
+
+  // fade `fromName` out while `toName` fades in
+  const crossfade = (fromName, toName, { out, inn, forget = false }) => {
+    start(toName, { ms: inn, restart: true }).then((ok) => !ok && armUnlock());
+    fadeOutAndPause(audios[fromName], out, () => forget && destroy(fromName));
   };
 
   return {
@@ -560,111 +590,114 @@ const music = (() => {
     },
     getSnapshot: () => G.snapshot,
     hasAudio: () => Boolean(TRACKS.intro || TRACKS.time || TRACKS.main),
+
+    // initial = "time" when the site is opened and the timer is already at 0
     init(initial) {
       if (G.started) return;
       G.started = true;
       state.track = initial === "time" && TRACKS.time ? "time" : "intro";
-      audioFor(state.track);
-      audioFor("main");
-      playCurrent().then((ok) => !ok && armUnlock());
+      if (state.track === "time") state.timePlayed = true;
+      audioFor("main"); // starts buffering now, so the switch later is instant
+      start(state.track).then((ok) => !ok && armUnlock());
     },
+
+    // make sure the current song is playing; if the browser blocks it, start on the next click/key
     ensure() {
-      playCurrent().then((ok) => !ok && armUnlock());
+      start(activeName()).then((ok) => !ok && armUnlock());
     },
+
+    // the music button is hidden on the "timer hit 0" screen
+    setHidden(hidden) {
+      if (state.hidden === hidden) return;
+      state.hidden = hidden;
+      emit();
+    },
+
     switchTo(name) {
       if (state.locked) return;
 
+      // the timer hit 0: Mariah Carey plays once, Little Things fades out
       if (name === "time") {
-        if (!TRACKS.time || state.track === "time" || G.timeDone) return;
+        if (!TRACKS.time || state.timePlayed) return;
+        state.timePlayed = true;
+        const prev = state.track;
         state.track = "time";
-        const id = ++G.switchId;
-        const startTime = () => {
-          G.fading = false;
-          destroy("intro");
-          if (id !== G.switchId) return;
-          const next = audioFor("time");
-          if (!next) return;
-          next.currentTime = 0;
-          playCurrent().then((ok) => !ok && armUnlock());
-        };
-        const intro = audios.intro;
-        if (intro && !intro.paused) {
-          G.fading = true;
-          fade(intro, 0, 900, startTime);
-        } else {
-          startTime();
-        }
+        crossfade(prev, "time", { out: 700, inn: 500 });
         emit();
         return;
       }
 
-      if (name !== "main") return;
-      state.locked = true;
-      state.track = "main";
-      const id = ++G.switchId;
-      const startMain = () => {
-        G.fading = false;
-        destroy("intro");
-        destroy("time");
-        if (id !== G.switchId) return;
-        const next = audioFor("main");
-        if (!next) {
-          state.playing = false;
-          emit();
+      // "I'm Ready!!": Mariah fades out while Little Things fades back in
+      if (name === "intro") {
+        const prev = state.track;
+        state.timePlayed = true; // Mariah never plays again
+        if (prev === "intro") {
+          start("intro", { ms: 1400 }).then((ok) => !ok && armUnlock());
           return;
         }
-        next.currentTime = 0;
-        playCurrent().then((ok) => !ok && armUnlock());
-      };
-      const playingNow = [audios.intro, audios.time].filter((a) => a && !a.paused);
-      if (playingNow.length) {
-        G.fading = true;
-        let left = playingNow.length;
-        playingNow.forEach((a) =>
-          fade(a, 0, 900, () => {
-            left -= 1;
-            if (left === 0) startMain();
-          })
-        );
-      } else {
-        startMain();
+        state.track = "intro";
+        crossfade(prev, "intro", { out: 1400, inn: 2200, forget: true });
+        emit();
+        return;
       }
-      emit();
+
+      // the birthday page opens: the countdown songs fade out for good, I Like Me Better fades in
+      if (name === "main") {
+        state.locked = true;
+        state.track = "main";
+        start("main", { ms: 2000, restart: true }).then((ok) => !ok && armUnlock());
+        ["intro", "time"].forEach((n) => fadeOutAndPause(audios[n], 1400, () => destroy(n)));
+        emit();
+      }
     },
+
+    // the button: mute / unmute
     toggle() {
-      const name = state.locked ? "main" : state.track;
-      if (!audioFor(name)) return;
+      const name = activeName();
+      const a = audios[name];
+      if (!a) return;
+      // sound has not started yet (the browser was blocking it): this click starts it, not mutes it
+      if (!state.muted && a.paused) {
+        start(name).then((ok) => !ok && armUnlock());
+        return;
+      }
       state.muted = !state.muted;
-      Object.values(audios).forEach((a) => {
-        a.muted = state.muted;
+      Object.values(audios).forEach((x) => {
+        x.muted = state.muted;
       });
+      if (!state.muted) start(name).then((ok) => !ok && armUnlock());
       emit();
-      if (!state.muted) playCurrent();
     },
   };
 })();
 
 function MusicButton() {
-  const { playing } = useSyncExternalStore(music.subscribe, music.getSnapshot);
+  const { playing, hidden } = useSyncExternalStore(music.subscribe, music.getSnapshot);
   if (!music.hasAudio()) return null;
   return (
-    <motion.button
-      className="music"
-      onClick={() => music.toggle()}
-      aria-label={playing ? "Pause music" : "Play music"}
-      initial={{ opacity: 0, scale: 0.6 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.08 }}
-      whileTap={{ scale: 0.92 }}
-      transition={SPRING}
-    >
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M9 18V5l11-2v13" />
-        <circle cx="6" cy="18" r="3" />
-        <circle cx="17" cy="16" r="3" />
-        {!playing && <line x1="3" y1="3" x2="21" y2="21" />}
-      </svg>
-    </motion.button>
+    <AnimatePresence>
+      {!hidden && (
+        <motion.button
+          key="music"
+          className="music"
+          onClick={() => music.toggle()}
+          aria-label={playing ? "Mute music" : "Play music"}
+          initial={{ opacity: 0, scale: 0.6 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.6 }}
+          whileHover={{ scale: 1.08 }}
+          whileTap={{ scale: 0.92 }}
+          transition={SPRING}
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18V5l11-2v13" />
+            <circle cx="6" cy="18" r="3" />
+            <circle cx="17" cy="16" r="3" />
+            {!playing && <line x1="3" y1="3" x2="21" y2="21" />}
+          </svg>
+        </motion.button>
+      )}
+    </AnimatePresence>
   );
 }
 
@@ -1046,8 +1079,8 @@ function Envelope({ open, name }) {
   );
 }
 
-function LetterModal({ letter, onClose }) {
-  const [stage, setStage] = useState("closed");
+function LetterModal({ letter, instant = false, onClose }) {
+  const [stage, setStage] = useState(instant ? "paper" : "closed");
   const scrollRef = useRef(null);
   const [edges, setEdges] = useState({ top: false, bottom: false });
 
@@ -1069,8 +1102,12 @@ function LetterModal({ letter, onClose }) {
 
   useEffect(() => {
     document.body.classList.add("modal-open");
-    const t1 = setTimeout(() => setStage("opening"), 450);
-    const t2 = setTimeout(() => setStage("paper"), 1700);
+    let t1;
+    let t2;
+    if (!instant) {
+      t1 = setTimeout(() => setStage("opening"), 450);
+      t2 = setTimeout(() => setStage("paper"), 1700);
+    }
     const onKey = (e) => e.key === "Escape" && onClose();
     window.addEventListener("keydown", onKey);
     return () => {
@@ -1079,7 +1116,7 @@ function LetterModal({ letter, onClose }) {
       clearTimeout(t2);
       window.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, [onClose, instant]);
 
   return (
     <motion.div
@@ -1151,17 +1188,24 @@ function LetterModal({ letter, onClose }) {
 const RESTS = [-3, 4, -5, 2, -4];
 
 function Letters() {
+  // order[last] is the letter on top of the pile (unopened letters only)
   const [order, setOrder] = useState(() => CONFIG.letters.map((_, i) => i).reverse());
+  // letters she has opened, in the order she opened them: they wait on the side
+  const [opened, setOpened] = useState([]);
   const [active, setActive] = useState(null);
   const activeRef = useRef(null);
 
-  const open = (i) => {
-    activeRef.current = i;
-    setActive(i);
+  const open = (i, instant = false) => {
+    activeRef.current = { i, instant };
+    setActive({ i, instant });
   };
   const close = useCallback(() => {
     const cur = activeRef.current;
-    if (cur !== null) setOrder((o) => [cur, ...o.filter((x) => x !== cur)]);
+    if (cur && !cur.instant) {
+      // the letter leaves the pile and its opened envelope appears on the side
+      setOrder((o) => o.filter((x) => x !== cur.i));
+      setOpened((p) => (p.includes(cur.i) ? p : [...p, cur.i]));
+    }
     activeRef.current = null;
     setActive(null);
   }, []);
@@ -1176,53 +1220,104 @@ function Letters() {
         hehe kinonchaba ko sila for these, i'm sure you'll love them. Click mo para maopen.
       </Reveal>
 
-      <Reveal y={70} start={1} end={0.72}>
-        <div className="pile">
-          {CONFIG.letters.map((l, i) => {
-            const d = order.length - 1 - order.indexOf(i);
-            const isTop = d === 0;
-            return (
-              <motion.button
-                key={l.label}
-                className="pile-item"
-                style={{ zIndex: 10 - d }}
-                disabled={!isTop}
-                tabIndex={isTop ? 0 : -1}
-                initial={false}
-                animate={{
-                  y: -d * 14,
-                  x: (d % 2 ? 1 : -1) * d * 6,
-                  rotate: isTop ? RESTS[i % RESTS.length] * 0.4 : RESTS[i % RESTS.length],
-                  scale: 1 - d * 0.035,
-                }}
-                whileHover={isTop ? { y: -d * 14 - 10, rotate: 0 } : undefined}
-                whileTap={isTop ? { scale: 0.97 } : undefined}
-                transition={SPRING}
-                onClick={() => isTop && open(i)}
-                aria-label={isTop ? `Open letter from ${l.label}` : undefined}
-              >
-                <Envelope open={false} name={l.label} />
-              </motion.button>
-            );
-          })}
-        </div>
-      </Reveal>
+      <div className="letters-stage">
+        <Reveal y={70} start={1} end={0.72}>
+          <div className="pile">
+            <AnimatePresence initial={false}>
+              {CONFIG.letters.map((l, i) => {
+                if (!order.includes(i)) return null;
+                const d = order.length - 1 - order.indexOf(i); // 0 = top
+                const isTop = d === 0;
+                return (
+                  <motion.button
+                    key={l.label}
+                    className="pile-item"
+                    style={{ zIndex: 10 - d }}
+                    disabled={!isTop}
+                    tabIndex={isTop ? 0 : -1}
+                    initial={false}
+                    animate={{
+                      y: -d * 14,
+                      x: (d % 2 ? 1 : -1) * d * 6,
+                      rotate: isTop ? RESTS[i % RESTS.length] * 0.4 : RESTS[i % RESTS.length],
+                      scale: 1 - d * 0.035,
+                    }}
+                    exit={{ opacity: 0, x: 140, y: -10, rotate: 10, scale: 0.8, transition: { duration: 0.5, ease: EASE } }}
+                    whileHover={isTop ? { y: -d * 14 - 10, rotate: 0 } : undefined}
+                    whileTap={isTop ? { scale: 0.97 } : undefined}
+                    transition={SPRING}
+                    onClick={() => isTop && open(i)}
+                    aria-label={isTop ? `Open letter from ${l.label}` : undefined}
+                  >
+                    <Envelope open={false} name={l.label} />
+                  </motion.button>
+                );
+              })}
+            </AnimatePresence>
 
-      <div className="pile-nav" role="group" aria-label="Choose which letter is on top">
-        {CONFIG.letters.map((l, i) => (
-          <button
-            key={l.label}
-            className={`pile-chip ${topIndex === i ? "on" : ""}`}
-            onClick={() => bringToTop(i)}
-            aria-pressed={topIndex === i}
-          >
-            {l.label}
-          </button>
-        ))}
+            {order.length === 0 && (
+              <motion.p
+                className="pile-empty"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.6, ease: EASE }}
+              >
+                You opened them all &hearts;
+              </motion.p>
+            )}
+          </div>
+        </Reveal>
+
+        {opened.length > 0 && (
+          <div className="opened-shelf" role="group" aria-label="Letters you already opened">
+            <p className="shelf-title">Opened. Tap one to read it again</p>
+            <div className="shelf-grid">
+              <AnimatePresence initial={false}>
+                {opened.map((i, n) => {
+                  const l = CONFIG.letters[i];
+                  return (
+                    <motion.button
+                      key={l.label}
+                      className="shelf-item"
+                      initial={{ opacity: 0, x: -110, y: 14, rotate: -14, scale: 0.6 }}
+                      animate={{ opacity: 1, x: 0, y: 0, rotate: n % 2 ? 2.5 : -2.5, scale: 1 }}
+                      whileHover={{ y: -8, rotate: 0, scale: 1.04 }}
+                      whileTap={{ scale: 0.96 }}
+                      transition={SPRING}
+                      onClick={() => open(i, true)}
+                      aria-label={`Read the letter from ${l.label} again`}
+                    >
+                      <Envelope open name={l.label} />
+                    </motion.button>
+                  );
+                })}
+              </AnimatePresence>
+            </div>
+          </div>
+        )}
       </div>
 
+      {order.length > 1 && (
+        <div className="pile-nav" role="group" aria-label="Choose which letter is on top">
+          {CONFIG.letters.map((l, i) =>
+            order.includes(i) ? (
+              <button
+                key={l.label}
+                className={`pile-chip ${topIndex === i ? "on" : ""}`}
+                onClick={() => bringToTop(i)}
+                aria-pressed={topIndex === i}
+              >
+                {l.label}
+              </button>
+            ) : null
+          )}
+        </div>
+      )}
+
       <AnimatePresence>
-        {active !== null && <LetterModal key="letter" letter={CONFIG.letters[active]} onClose={close} />}
+        {active !== null && (
+          <LetterModal key="letter" letter={CONFIG.letters[active.i]} instant={active.instant} onClose={close} />
+        )}
       </AnimatePresence>
     </section>
   );
@@ -1424,12 +1519,10 @@ function Backdrop() {
     <>
       <SunsetLayer />
       <NightScene />
-      {mode !== "night" && (
-        <>
-          <CloudsM warm={mode === "sunset"} />
-          <TulipsM mode="on-dark" />
-        </>
-      )}
+      <DayLayer>
+        <CloudsM warm={mode === "sunset"} />
+        <TulipsM mode="on-dark" />
+      </DayLayer>
     </>
   );
 }
@@ -1444,8 +1537,11 @@ function PageSky() {
 }
 
 function SiteGround() {
-  const mode = useContext(SkyModeContext);
-  return mode === "night" ? null : <TulipsM mode="on-light" />;
+  return (
+    <DayLayer page>
+      <TulipsM mode="on-light" />
+    </DayLayer>
+  );
 }
 
 const UNLOCK_AT = new Date(CONFIG.unlockAt).getTime();
@@ -1474,6 +1570,12 @@ function Gate({ left, onBypass }) {
     if (!ready || fired.current) return;
     fired.current = true;
     music.switchTo("time");
+  }, [ready]);
+
+  // no music button on the "timer hit 0" screen
+  useEffect(() => {
+    music.setHidden(ready);
+    return () => music.setHidden(false);
   }, [ready]);
 
   useEffect(() => {
@@ -1862,9 +1964,9 @@ export default function App() {
   }, [unlocked]);
 
   return (
-    <SkyProvider code={CONFIG.skyCode}>
+    <SkyProvider codes={CONFIG.skyCodes}>
       {unlocked ? <Birthday /> : <Gate left={UNLOCK_AT - now} onBypass={() => {
-          music.ensure();
+          music.switchTo("intro");
           setUnlocked(true);
         }} />}
       <MusicButton />

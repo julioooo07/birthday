@@ -19,7 +19,7 @@
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  transition: opacity 0.2s linear;
+  transition: opacity 6s var(--ease-io, ease-in-out), visibility 0s linear 0s;
   background: linear-gradient(180deg, #2a2c6b 0%, #7d4a86 30%, #ff8a4c 66%, #ffc77a 100%);
 }
 .sun-glow {
@@ -68,6 +68,27 @@
 .cloud-svg { transition: fill 4s ease; }
 .clouds.warm .cloud-svg { fill: #ffd9b5; }
 
+/* the day look (clouds + tulips) fades out while the night fades in */
+.day-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 6s var(--ease-io, ease-in-out), visibility 0s linear 0s;
+}
+.day-layer.page { position: fixed; }
+
+/* a layer that is fully faded out is hidden, and once it has stayed hidden its animations are paused (saves work) */
+.sunset-layer.off,
+.night-scene.off,
+.day-layer.off {
+  visibility: hidden;
+  transition: opacity 6s var(--ease-io, ease-in-out), visibility 0s linear 6s;
+}
+.sunset-layer.parked *,
+.night-scene.parked *,
+.day-layer.parked * { animation-play-state: paused !important; }
+
 /* fixed sky behind the whole main page */
 .page-sky {
   position: fixed;
@@ -85,7 +106,7 @@
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
-  transition: opacity 0.2s linear;
+  transition: opacity 6s var(--ease-io, ease-in-out), visibility 0s linear 0s;
   background: linear-gradient(180deg, #02030a 0%, #060a1c 50%, #0d1535 100%);
 }
 
@@ -120,8 +141,8 @@
 }
 .skyline.far { height: 58vh; }
 .skyline.near { height: 44vh; }
-.win.blink { animation: win-blink 4s steps(1) infinite; }
-@keyframes win-blink { 0%, 55% { opacity: 1; } 56%, 70% { opacity: 0.1; } 71%, 100% { opacity: 1; } }
+.win.blink { animation: win-blink 4s ease-in-out infinite; }
+@keyframes win-blink { 0%, 52% { opacity: 1; } 58%, 68% { opacity: 0.12; } 74%, 100% { opacity: 1; } }
 .roof-light { fill: #ff4b5c; animation: roof-blink 1.8s ease-in-out infinite; }
 @keyframes roof-blink { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
 
@@ -227,7 +248,7 @@ body.is-night .memories.wide {
   bottom: 14px;
   max-width: 70vw;
   padding: 6px 14px;
-  border-radius: 999px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.92);
   color: var(--navy);
   font: 700 0.8rem var(--sans);

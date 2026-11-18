@@ -1,0 +1,93 @@
+/* =====================================================================
+   Smoothness layer. Imported last, so it refines everything before it.
+   - one soft easing curve for every hover / press / fade
+   - looping motion eased (no sudden jumps) and kept on the GPU
+   - big blurs made lighter, animated layers isolated from the rest of the page
+   Delete the import of this file in App.jsx to go back to the old feel.
+   ===================================================================== */
+
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+body { -webkit-tap-highlight-color: transparent; }
+
+/* ---------- 1. hover / press / fade transitions ---------- */
+.btn {
+  transition:
+    background-color 0.35s var(--ease-out),
+    border-color 0.35s var(--ease-out),
+    color 0.35s var(--ease-out),
+    box-shadow 0.35s var(--ease-out);
+}
+.check-box { transition: background-color 0.4s var(--ease-out), border-color 0.4s var(--ease-out); }
+.ask-link { transition: color 0.35s var(--ease-out), background-size 0.5s var(--ease-out); }
+.pile-chip {
+  transition:
+    background-color 0.35s var(--ease-out),
+    color 0.35s var(--ease-out),
+    border-color 0.35s var(--ease-out);
+}
+.strip-arrow {
+  transition:
+    background-color 0.3s var(--ease-out),
+    color 0.3s var(--ease-out),
+    box-shadow 0.3s var(--ease-out);
+}
+.music { transition: color 0.3s var(--ease-out); }
+.paper-fade { transition: opacity 0.5s var(--ease-out); }
+.flame { transition: opacity 0.7s var(--ease-out), transform 0.7s var(--ease-out); }
+.cloud-svg { transition: fill 4s var(--ease-io); }
+
+/* ---------- 2. looping motion ---------- */
+/* tulips: a calmer, longer gust that eases in and out instead of snapping back */
+@keyframes breeze {
+  0%   { transform: rotate(-3deg) skewX(-1deg); }
+  28%  { transform: rotate(3deg) skewX(1deg); }
+  52%  { transform: rotate(-2deg) skewX(0deg); }
+  66%  { transform: rotate(17deg) skewX(-5deg); }
+  78%  { transform: rotate(-5deg) skewX(1.5deg); }
+  89%  { transform: rotate(5deg) skewX(-2deg); }
+  100% { transform: rotate(-3deg) skewX(-1deg); }
+}
+.tulip-svg { animation-timing-function: ease-in-out; }
+
+/* clouds and the car move with translate3d so they stay on the GPU */
+@keyframes drift {
+  from { transform: translate3d(-100%, 0, 0); }
+  to { transform: translate3d(100vw, 0, 0); }
+}
+@keyframes bob {
+  from { transform: translate3d(0, -6px, 0); }
+  to { transform: translate3d(0, 6px, 0); }
+}
+@keyframes drive {
+  from { transform: translate3d(-30vw, 0, 0); }
+  to { transform: translate3d(112vw, 0, 0); }
+}
+@keyframes flicker {
+  0%   { transform: scale(1, 1) rotate(-2deg); }
+  50%  { transform: scale(0.94, 1.06) rotate(1deg); }
+  100% { transform: scale(0.9, 1.1) rotate(2deg); }
+}
+.flame-shape { animation-duration: 1.1s; }
+
+/* ---------- 3. keep animated things on their own GPU layer ---------- */
+.cloud, .tulip-svg, .sticker, .car, .rays, .sun-glow, .hero-bg {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.sunset-layer, .night-scene, .day-layer, .fireworks { will-change: opacity; }
+
+/* isolate big animated layers so the rest of the page never re-lays out because of them */
+.clouds, .tulips, .page-sky, .sticker-layer { contain: layout paint; }
+
+/* ---------- 4. lighter blurs (the heaviest effect on phones) ---------- */
+.blur-overlay {
+  -webkit-backdrop-filter: blur(12px) saturate(1.1);
+  backdrop-filter: blur(12px) saturate(1.1);
+}
+.ask-overlay,
+.lightbox { will-change: opacity; }
+.lightbox { -webkit-backdrop-filter: blur(5px); backdrop-filter: blur(5px); }
