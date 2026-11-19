@@ -1,0 +1,145 @@
+/* =====================================================================
+   Jar of love notes + the appreciation ending.
+   ===================================================================== */
+
+/* ---------- jar ---------- */
+.jar-section {
+  max-width: 620px;
+  margin: 0 auto;
+  padding: 50px 24px 60px;
+  text-align: center;
+}
+.jar-sub {
+  margin: -12px 0 26px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.2rem;
+  color: var(--blue);
+}
+.jar-btn {
+  display: block;
+  width: min(66vw, 250px);
+  margin: 0 auto;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  transform-origin: 50% 100%;
+  filter: drop-shadow(0 18px 26px rgba(15, 42, 92, 0.22));
+}
+.jar-btn:focus-visible { outline: 3px solid var(--sky); outline-offset: 8px; border-radius: 24px; }
+.jar { display: block; width: 100%; height: auto; overflow: visible; }
+.jar-label-big { font-family: var(--serif); font-weight: 700; font-size: 26px; fill: var(--navy); }
+.jar-label-small { font-family: var(--serif); font-style: italic; font-size: 12px; fill: var(--blue); }
+.jar-count {
+  margin-top: 22px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.15rem;
+  color: #6f8cc4;
+}
+
+/* ---------- the scrunched note ---------- */
+.note-stage {
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  perspective: 900px;
+}
+.note-area {
+  display: grid;
+  place-items: center;
+  width: min(92vw, 440px);
+  min-height: min(48vh, 320px);
+}
+.note-area > * { grid-area: 1 / 1; }
+.note-ball {
+  width: clamp(170px, 46vw, 220px);
+  filter: drop-shadow(0 20px 26px rgba(0, 0, 0, 0.4));
+  will-change: transform, opacity;
+}
+.note-ball svg { display: block; width: 100%; height: auto; overflow: visible; }
+
+.note-paper {
+  position: relative;
+  width: min(88vw, 420px);
+  padding: 38px 30px 28px;
+  text-align: center;
+  border-radius: 6px;
+  background-color: #fffdf8;
+  background-image: repeating-linear-gradient(to bottom, transparent 0 35px, #d8e5fb 35px 36px);
+  box-shadow: 0 28px 70px rgba(0, 0, 0, 0.45);
+  will-change: transform, opacity;
+}
+.note-paper .creases { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.note-paper .creases path {
+  fill: none;
+  stroke: rgba(15, 42, 92, 0.26);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.note-text {
+  font-family: var(--serif);
+  font-style: italic;
+  font-weight: 600;
+  font-size: clamp(1.55rem, 5.2vw, 2.1rem);
+  line-height: 1.35;
+  color: var(--navy);
+}
+.note-from {
+  display: block;
+  margin-top: 18px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: var(--blue);
+}
+.note-actions { min-height: 54px; }
+.note-actions-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.note-actions .btn.ghost { background: rgba(255, 255, 255, 0.92); }
+
+/* ---------- appreciation ending ---------- */
+.ending {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 70px 24px 10px;
+  text-align: center;
+}
+.ending::before {
+  content: "";
+  display: block;
+  width: 64px;
+  height: 3px;
+  margin: 0 auto 30px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--sky), var(--pink));
+}
+.ending-heart {
+  margin-bottom: 18px;
+  font-size: 2.1rem;
+  line-height: 1;
+  color: var(--pink-deep);
+}
+.ending-heart span { display: inline-block; animation: heart-beat 2.4s ease-in-out infinite; }
+@keyframes heart-beat {
+  0%, 60%, 100% { transform: scale(1); }
+  70% { transform: scale(1.18); }
+  80% { transform: scale(1); }
+  88% { transform: scale(1.1); }
+}
+.ending-text {
+  margin-bottom: 26px;
+  font-family: var(--serif);
+  font-size: clamp(1.35rem, 3.6vw, 1.7rem);
+  line-height: 1.6;
+  color: var(--navy);
+}
+.ending-sign {
+  margin-top: 34px;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: clamp(1.5rem, 4.4vw, 2rem);
+  line-height: 1.4;
+  color: var(--blue);
+}
+.ending-sign span { display: block; }

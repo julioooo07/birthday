@@ -38,11 +38,6 @@ export function SkyProvider({ codes = {}, children }) {
     [armed, target.sunset, target.night]
   );
 
-  useEffect(() => {
-    document.body.classList.toggle("is-night", target.mode === "night");
-    document.body.classList.toggle("is-sunset", target.mode === "sunset");
-  }, [target.mode]);
-
   // testing only: type a word anywhere to preview that time of day
   useEffect(() => {
     const words = Object.entries(codes)

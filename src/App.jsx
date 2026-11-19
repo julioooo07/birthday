@@ -12,6 +12,8 @@ import "./App.css";
 import "./Sky.css";
 import "./Smooth.css";
 import "./Letters.css";
+import "./Extras.css";
+import Jar from "./Jar.jsx";
 import { DayLayer, Fireworks, NightScene, SkyProvider, SunsetLayer } from "./Sky.jsx";
 import { SkyModeContext } from "./skyContext.jsx";
 import mainPic from "./assets/MainPic.jpg";
@@ -613,6 +615,16 @@ const music = (() => {
       emit();
     },
 
+    // testing only: the "zero" preview was switched off again. Go back to the countdown song
+    // (so the button works again) and let Mariah play again the next time
+    backToCountdown() {
+      if (state.locked || state.track !== "time") return;
+      state.track = "intro";
+      state.timePlayed = false;
+      crossfade("time", "intro", { out: 600, inn: 1400, forget: true });
+      emit();
+    },
+
     switchTo(name) {
       if (state.locked) return;
 
@@ -862,7 +874,7 @@ function HugAnim() {
   );
 }
 
-function AskFlow({ onClose, hugged }) {
+function AskFlow({ onClose, hugged, onFinish }) {
   const [step, setStep] = useState(hugged ? "q" : "hug");
   const [pieces, setPieces] = useState([]);
   const A = CONFIG.ask;
@@ -892,6 +904,7 @@ function AskFlow({ onClose, hugged }) {
   const goFinal = () => {
     setPieces(makePieces());
     setStep("final");
+    onFinish?.();
   };
 
   return (
@@ -1527,20 +1540,32 @@ function Backdrop() {
   );
 }
 
-function PageSky() {
-  return (
-    <div className="page-sky" aria-hidden="true">
-      <SunsetLayer page />
-      <NightScene />
-    </div>
-  );
+function SiteGround() {
+  return <TulipsM mode="on-light" />;
 }
 
-function SiteGround() {
+/* ---------------------------- appreciation ending ---------------------------- */
+
+function Ending({ innerRef }) {
   return (
-    <DayLayer page>
-      <TulipsM mode="on-light" />
-    </DayLayer>
+    <section className="ending" ref={innerRef}>
+      <Reveal as="p" className="ending-heart" y={20} start={1} end={0.85}>
+        <span>&hearts;</span>
+      </Reveal>
+      <Reveal as="p" className="ending-text" y={40} start={1} end={0.82}>
+        This may have been made for your birthday, but everything inside it represents something I want you to
+        remember every day. You&rsquo;re loved, you&rsquo;re appreciated, and you&rsquo;re someone I&rsquo;ll always
+        be grateful for.
+      </Reveal>
+      <Reveal as="p" className="ending-text" y={40} start={1} end={0.8}>
+        Happy birthday, my love. This isn&rsquo;t just a celebration of the day you were born, it&rsquo;s a reminder
+        that having you in my life will always be worth celebrating for.
+      </Reveal>
+      <Reveal as="p" className="ending-sign" y={30} start={0.98} end={0.78}>
+        <span>In every lifetime</span>
+        <span>loved, Hulyo.</span>
+      </Reveal>
+    </section>
   );
 }
 
@@ -1567,9 +1592,14 @@ function Gate({ left, onBypass }) {
   const ready = shownLeft <= 0;
 
   useEffect(() => {
-    if (!ready || fired.current) return;
-    fired.current = true;
-    music.switchTo("time");
+    if (ready) {
+      if (fired.current) return;
+      fired.current = true;
+      music.switchTo("time");
+    } else if (fired.current) {
+      fired.current = false; // only the "zero" preview can go back
+      music.backToCountdown();
+    }
   }, [ready]);
 
   // no music button on the "timer hit 0" screen
@@ -1720,6 +1750,7 @@ const MemoriesM = memo(Memories);
 const LettersM = memo(Letters);
 const TiedLetterM = memo(TiedLetter);
 const StickerM = memo(Sticker);
+const JarM = memo(Jar);
 
 function Birthday() {
   const [step, setStep] = useState(0);
@@ -1731,6 +1762,21 @@ function Birthday() {
   const hugIndex = CONFIG.checklist.findIndex((c) => /hug/i.test(c.label));
   const hugged = hugIndex < 0 || checked[hugIndex];
   const closeAsk = useCallback(() => setAskOpen(false), []);
+  // she reached the last ticket: the appreciation ending appears at the end of the page
+  const [finished, setFinished] = useState(false);
+  const markFinished = useCallback(() => setFinished(true), []);
+  const endingRef = useRef(null);
+  const scrolledToEnding = useRef(false);
+
+  // once the tickets close, glide down to the ending (only the first time)
+  useEffect(() => {
+    if (!finished || askOpen || scrolledToEnding.current) return undefined;
+    const t = setTimeout(() => {
+      scrolledToEnding.current = true;
+      endingRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 500);
+    return () => clearTimeout(t);
+  }, [finished, askOpen]);
 
   useEffect(() => {
     music.ensure();
@@ -1876,8 +1922,6 @@ function Birthday() {
         >
           {(siteReady || step >= 4) && (
             <>
-          <PageSky />
-
           <motion.div
             className="hero-bg"
             aria-hidden="true"
@@ -1918,6 +1962,8 @@ function Birthday() {
 
             <LettersM />
 
+            <JarM Reveal={Reveal} />
+
             <Checklist done={checked} setDone={setChecked} />
 
             <Reveal as="section" className="ask" y={40} start={1} end={0.85}>
@@ -1931,6 +1977,8 @@ function Birthday() {
               </motion.button>
             </Reveal>
 
+            {finished && <Ending innerRef={endingRef} />}
+
             <footer aria-hidden="true" />
           </main>
             </>
@@ -1939,7 +1987,7 @@ function Birthday() {
 
         {step === 5 && <motion.div className="progress" style={{ scaleX: progress }} />}
 
-        <AnimatePresence>{askOpen && <AskFlow key="ask" onClose={closeAsk} hugged={hugged} />}</AnimatePresence>
+        <AnimatePresence>{askOpen && <AskFlow key="ask" onClose={closeAsk} hugged={hugged} onFinish={markFinished} />}</AnimatePresence>
 
         <AnimatePresence>
           {lightbox && <MemoryViewer key="memory" memory={lightbox} onClose={closeLightbox} />}
